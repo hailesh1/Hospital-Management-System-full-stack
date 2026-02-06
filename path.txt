@@ -1,0 +1,46 @@
+C:\easeus folder\New folder\E#(NTFS 1)\haile j\react-tailwind-project (5)\New Folder
+
+
+"c:\easeus folder\New folder\E#(NTFS 1)\haile j\Restored_Project\backend\start_keycloak.bat"     keycloak
+
+ "c:\easeus folder\New folder\E#(NTFS 1)\haile j\Restored_Project\backend\run_app.bat"           backend
+
+for error happen in cmd to run the frontend
+
+"c:\easeus folder\New folder\E#(NTFS 1)\haile j\react-tailwind-project (5)\New Folder\fix_and_start_frontend.bat"
+
+
+C:\Projects\HospitalManagement\backend\keycloak-23.0.3\bin\kc.bat start-dev
+
+cd C:\Projects\HospitalManagement\backend && mvn spring-boot:run
+
+cd C:\Projects\HospitalManagement\frontend && npm run dev
+
+cd /d C:\Projects\HospitalManagement
+START_PROJECT.bat
+
+
+admin	admin@hms.com	password
+Doctor	hiwot.ketma	hiwot.ketma@hms.com	password
+Doctor	dawit.kebede	dawit.kebede@hms.com	password
+Patient	alem.tadesse	alem.tadesse@hms.com	password
+Patient	metsi.yohannes	metsi.yohannes@hms.com	password
+                         megersa.dereje@gmail.com   password
+Receptionist	haile.adugna	haile.adugna@hms.com	password
+Receptionist	sara.tekelle	sara.tekelle@hms.com	password
+
+
+c:\Projects\HospitalManagement\backend\fix_and_start_keycloak.bat
+
+
+
+
+
+Role	Username	Password
+Admin	admin	admin or password
+Doctor	hiwot.ketma	password
+Doctor	dawit.kebede	password
+Patient	alem.tadesse	password
+Patient	metsi.yohannes	password
+Receptionist	haile.adugna	password
+Receptionist	sara.tekelle	password

@@ -1,0 +1,67 @@
+## Error Type
+Console Error
+
+## Error Message
+column "created_by" of relation "patients" does not exist
+
+
+    at handleSubmit (components/patients/add-patient-dialog.tsx:80:15)
+
+## Code Frame
+  78 |       if (!response.ok) {
+  79 |         const errorData = await response.json()
+> 80 |         throw new Error(errorData.error || 'Failed to add patient')
+     |               ^
+  81 |       }
+  82 |
+  83 |       const createdPatient = await response.json()
+
+Next.js version: 16.0.10 (Turbopack)
+
+2  POST /api/staff 500 in 3.4s (compile: 5ms, render: 3.4s)
+ when i try to make appointment and upload medical record and create invoice
+  selection of patient dropdown is say no patient 
+3 when i login as doctor 
+## Error Type
+Build Error
+
+## Error Message
+Parsing ecmascript source code failed
+
+## Build Output
+./app/(dashboard)/doctor/dashboard/page.tsx:66:2
+Parsing ecmascript source code failed
+  64 |   }
+  65 |   fetchStats()
+> 66 | }, [user?.id])
+     |  ^
+  67 |
+  68 | const handleStatusChange = async (newStatus: string) => {
+  69 |   try {
+
+Expression expected
+
+Next.js version: 16.0.10 (Turbopack)
+
+errrorrr     000000000000000000000000
+## Error Type
+Build Error
+
+## Error Message
+Parsing ecmascript source code failed
+
+## Build Output
+./app/(dashboard)/doctor/dashboard/page.tsx:66:2
+Parsing ecmascript source code failed
+  64 |   }
+  65 |   fetchStats()
+> 66 | }, [user?.id])
+     |  ^
+  67 |
+  68 | const handleStatusChange = async (newStatus: string) => {
+  69 |   try {
+
+Expression expected
+
+Next.js version: 16.0.10 (Turbopack)
+

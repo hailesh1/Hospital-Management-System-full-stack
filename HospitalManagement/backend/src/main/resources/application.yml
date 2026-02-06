@@ -1,0 +1,60 @@
+spring:
+  application:
+    name: hospital-management-api
+  
+  datasource:
+    url: jdbc:postgresql://localhost:5432/hospital_management
+    username: ${DB_USERNAME:hospital_user}
+    password: ${DB_PASSWORD:1234}
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: create
+    show-sql: true
+    generate-ddl: true
+    defer-datasource-initialization: true
+    properties:
+      hibernate:
+        format_sql: true
+  
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 10MB
+  
+  jackson:
+    mapper:
+      accept-case-insensitive-enums: true
+
+  security:
+    oauth2:
+      resourceserver:
+        jwt:
+          issuer-uri: http://localhost:8180/realms/HMS
+
+server:
+  port: 8080
+  servlet:
+    context-path: /api
+
+# Keycloak Configuration
+keycloak:
+  realm: HMS
+  auth-server-url: http://localhost:8180
+  resource: hms-client
+  public-client: true
+  bearer-only: false
+
+# MinIO Configuration
+minio:
+  endpoint: http://localhost:9000
+  access-key: ${MINIO_ACCESS_KEY:minioadmin}
+  secret-key: ${MINIO_SECRET_KEY:minioadmin}
+  bucket-name: hospital-files
+
+# Logging
+logging:
+  level:
+    com.hospital.management: DEBUG
+    org.springframework.security: DEBUG

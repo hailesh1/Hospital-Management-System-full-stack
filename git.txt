@@ -1,0 +1,9 @@
+# Node / Next
+node_modules/
+.next/
+
+# Logs
+*.log
+
+# OS
+.DS_Store

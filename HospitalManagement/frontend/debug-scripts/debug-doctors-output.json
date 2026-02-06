@@ -1,0 +1,114 @@
+{
+  "doctors": [
+    {
+      "id": "4b11afb8-ff6f-40e2-ab4b-a91ed4da72e8",
+      "first_name": "Hiwot",
+      "last_name": "Ketma",
+      "role": "DOCTOR"
+    },
+    {
+      "id": "f398b423-1706-47d6-b740-d9e9461432da",
+      "first_name": "Alemu",
+      "last_name": "Belay",
+      "role": "DOCTOR"
+    },
+    {
+      "id": "d0d1bf1b-3b21-43a9-bbed-0f55c8a3ebfa",
+      "first_name": "Marekan",
+      "last_name": "Haset",
+      "role": "DOCTOR"
+    },
+    {
+      "id": "0b6042cf-958b-4250-8039-aa9492c18f0c",
+      "first_name": "Rakeb",
+      "last_name": "Taye",
+      "role": "DOCTOR"
+    },
+    {
+      "id": "87b1f504-f3e5-476a-a3a3-55604688d6fe",
+      "first_name": "Rahel",
+      "last_name": "Miteku",
+      "role": "DOCTOR"
+    },
+    {
+      "id": "a300ee19-162a-4698-b4bb-486a304f05b1",
+      "first_name": "Hayelom ",
+      "last_name": "gosa",
+      "role": "DOCTOR"
+    },
+    {
+      "id": "cb527dc6-2f43-49ff-98ce-be8bc719e1bf",
+      "first_name": "Hiwot",
+      "last_name": "bekalu",
+      "role": "DOCTOR"
+    },
+    {
+      "id": "468d6a67-1fab-4f1b-bdb8-a6aa563a598f",
+      "first_name": "Dr. Haile",
+      "last_name": "Adugna",
+      "role": "DOCTOR"
+    },
+    {
+      "id": "ce4ebe40-3835-463a-b109-12a9107e55a4",
+      "first_name": "rahel",
+      "last_name": "rt",
+      "role": "DOCTOR"
+    },
+    {
+      "id": "1e6e875c-fa3b-473c-843c-89095d2f2924",
+      "first_name": "bes",
+      "last_name": "dfjjvnf",
+      "role": "DOCTOR"
+    },
+    {
+      "id": "64ea214e-392f-4062-9201-bee433eb6124",
+      "first_name": "jhgfdfgh",
+      "last_name": "juu",
+      "role": "DOCTOR"
+    },
+    {
+      "id": "c6604de9-c758-4426-8d36-8d1ae2e575e3",
+      "first_name": "titi",
+      "last_name": "teka",
+      "role": "DOCTOR"
+    },
+    {
+      "id": "e6ab82ef-8f60-40de-a232-a4e6e111e2af",
+      "first_name": "bina",
+      "last_name": "s",
+      "role": "DOCTOR"
+    }
+  ],
+  "sample_staff": [
+    {
+      "id": "4b11afb8-ff6f-40e2-ab4b-a91ed4da72e8",
+      "first_name": "Hiwot",
+      "last_name": "Ketma",
+      "role": "DOCTOR"
+    },
+    {
+      "id": "f398b423-1706-47d6-b740-d9e9461432da",
+      "first_name": "Alemu",
+      "last_name": "Belay",
+      "role": "DOCTOR"
+    },
+    {
+      "id": "d0d1bf1b-3b21-43a9-bbed-0f55c8a3ebfa",
+      "first_name": "Marekan",
+      "last_name": "Haset",
+      "role": "DOCTOR"
+    },
+    {
+      "id": "0b6042cf-958b-4250-8039-aa9492c18f0c",
+      "first_name": "Rakeb",
+      "last_name": "Taye",
+      "role": "DOCTOR"
+    },
+    {
+      "id": "87b1f504-f3e5-476a-a3a3-55604688d6fe",
+      "first_name": "Rahel",
+      "last_name": "Miteku",
+      "role": "DOCTOR"
+    }
+  ]
+}

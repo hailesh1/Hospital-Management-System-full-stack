@@ -1,0 +1,241 @@
+{
+    "realm": "HMS",
+    "enabled": true,
+    "registrationAllowed": true,
+    "resetPasswordAllowed": true,
+    "rememberMe": true,
+    "defaultRoles": [
+        "patient"
+    ],
+    "users": [
+        {
+            "username": "admin",
+            "enabled": true,
+            "email": "admin@hms.com",
+            "firstName": "Admin",
+            "lastName": "System",
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "password",
+                    "temporary": false
+                }
+            ],
+            "realmRoles": [
+                "admin",
+                "offline_access",
+                "uma_authorization"
+            ]
+        },
+        {
+            "username": "hiwot.ketma",
+            "enabled": true,
+            "email": "hiwot.ketma@hms.com",
+            "firstName": "Hiwot",
+            "lastName": "Ketma",
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "password",
+                    "temporary": false
+                }
+            ],
+            "realmRoles": [
+                "doctor",
+                "offline_access",
+                "uma_authorization"
+            ]
+        },
+        {
+            "username": "dawit.kebede",
+            "enabled": true,
+            "email": "dawit.kebede@hms.com",
+            "firstName": "Dawit",
+            "lastName": "Kebede",
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "password",
+                    "temporary": false
+                }
+            ],
+            "realmRoles": [
+                "doctor",
+                "offline_access",
+                "uma_authorization"
+            ]
+        },
+        {
+            "username": "alem.tadesse",
+            "enabled": true,
+            "email": "alem.tadesse@hms.com",
+            "firstName": "Alem",
+            "lastName": "Tadesse",
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "password",
+                    "temporary": false
+                }
+            ],
+            "realmRoles": [
+                "patient",
+                "offline_access",
+                "uma_authorization"
+            ]
+        },
+        {
+            "username": "metsi.yohannes",
+            "enabled": true,
+            "email": "metsi.yohannes@hms.com",
+            "firstName": "Metsi",
+            "lastName": "Yohannes",
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "password",
+                    "temporary": false
+                }
+            ],
+            "realmRoles": [
+                "patient",
+                "offline_access",
+                "uma_authorization"
+            ]
+        },
+        {
+            "username": "haile.adugna",
+            "enabled": true,
+            "email": "haile.adugna@hms.com",
+            "firstName": "Haile",
+            "lastName": "Adugna",
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "password",
+                    "temporary": false
+                }
+            ],
+            "realmRoles": [
+                "receptionist",
+                "offline_access",
+                "uma_authorization"
+            ]
+        },
+        {
+            "username": "sara.tekelle",
+            "enabled": true,
+            "email": "sara.tekelle@hms.com",
+            "firstName": "Sara",
+            "lastName": "Tekelle",
+            "credentials": [
+                {
+                    "type": "password",
+                    "value": "password",
+                    "temporary": false
+                }
+            ],
+            "realmRoles": [
+                "receptionist",
+                "offline_access",
+                "uma_authorization"
+            ]
+        }
+    ],
+    "roles": {
+        "realm": [
+            {
+                "name": "admin",
+                "description": "Administrator role"
+            },
+            {
+                "name": "doctor",
+                "description": "Doctor role"
+            },
+            {
+                "name": "patient",
+                "description": "Patient role"
+            },
+            {
+                "name": "receptionist",
+                "description": "Receptionist role"
+            },
+            {
+                "name": "offline_access",
+                "description": "Offline Access role"
+            },
+            {
+                "name": "uma_authorization",
+                "description": "UMA Authorization role"
+            },
+            {
+                "name": "default-roles-hms",
+                "description": "Default role for new users",
+                "composite": true,
+                "composites": {
+                    "realm": [
+                        "patient",
+                        "offline_access",
+                        "uma_authorization"
+                    ]
+                }
+            }
+        ]
+    },
+    "defaultRole": {
+        "name": "default-roles-hms"
+    },
+    "clients": [
+        {
+            "clientId": "hms-client",
+            "rootUrl": "http://localhost:3000",
+            "adminUrl": "http://localhost:3000",
+            "surrogateAuthRequired": false,
+            "enabled": true,
+            "alwaysDisplayInConsole": false,
+            "clientAuthenticatorType": "client-secret",
+            "redirectUris": [
+                "http://localhost:3000/*",
+                "http://127.0.0.1:3000/*"
+            ],
+            "webOrigins": [
+                "+",
+                "http://localhost:3000",
+                "http://127.0.0.1:3000"
+            ],
+            "notBefore": 0,
+            "bearerOnly": false,
+            "consentRequired": false,
+            "standardFlowEnabled": true,
+            "implicitFlowEnabled": false,
+            "directAccessGrantsEnabled": true,
+            "serviceAccountsEnabled": false,
+            "publicClient": true,
+            "frontchannelLogout": false,
+            "protocol": "openid-connect",
+            "attributes": {
+                "oidc.ciba.grant.enabled": "false",
+                "oauth2.device.authorization.grant.enabled": "false",
+                "display.on.consent.screen": "false",
+                "backchannel.logout.session.required": "true",
+                "backchannel.logout.revoke.offline.tokens": "false"
+            },
+            "authenticationFlowBindingOverrides": {},
+            "fullScopeAllowed": true,
+            "nodeReRegistrationTimeout": -1,
+            "defaultClientScopes": [
+                "web-origins",
+                "acr",
+                "roles",
+                "profile",
+                "email"
+            ],
+            "optionalClientScopes": [
+                "address",
+                "phone",
+                "offline_access",
+                "microprofile-jwt"
+            ]
+        }
+    ]
+}
