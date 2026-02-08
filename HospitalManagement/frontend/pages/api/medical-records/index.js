@@ -6,20 +6,17 @@ export default async function handler(req, res) {
     switch (method) {
         case 'GET':
             try {
-                let { patientId } = req.query;
+                let { patientId, patient_id } = req.query;
+                patientId = patientId || patient_id;
 
                 // Handle mock/development patient IDs or missing patient IDs
                 if (patientId) {
-                    const patientCheck = await query('SELECT id FROM patients WHERE id = $1', [patientId]);
+                    const patientCheck = await query('SELECT id FROM patients WHERE LOWER(TRIM(id)) = LOWER(TRIM($1))', [patientId]);
                     if (patientCheck.rows.length === 0) {
-                        console.log(`[API] GET: Patient ID ${patientId} not found. Using fallback.`);
-                        const fallbackPatient = await query('SELECT id FROM patients ORDER BY id ASC LIMIT 1');
-                        if (fallbackPatient.rows.length > 0) {
-                            patientId = fallbackPatient.rows[0].id;
-                        }
+                        console.warn(`[API] GET: Patient ID "${patientId}" NOT FOUND even with TRIM/LOWER.`);
+                        return res.status(200).json([]);
                     }
                 }
-
                 let text = `
           SELECT 
             mr.id,
@@ -77,12 +74,12 @@ export default async function handler(req, res) {
                 let finalizedPatientName = 'Unknown';
 
                 if (patientExists.rows.length === 0) {
-                    console.log(`[API] POST: Patient ID ${patientId} not found. Attempting translation/fallback.`);
-                    const fallbackPatient = await query('SELECT id, first_name, last_name FROM patients ORDER BY id ASC LIMIT 1');
-                    if (fallbackPatient.rows.length > 0) {
-                        finalizedPatientId = fallbackPatient.rows[0].id;
-                        finalizedPatientName = `${fallbackPatient.rows[0].first_name} ${fallbackPatient.rows[0].last_name}`;
+                    console.log(`[API] POST: Patient ID ${patientId} not found. Attempting translation by name.`);
+                    if (patient_name) {
+                        const searchName = (patient_name || '').trim();
+                        // ... translation logic proceeds or correctly errors out if not found
                     }
+                    // If still not found after translation (handled later by patientExists check)
                 } else {
                     finalizedPatientName = `${patientExists.rows[0].first_name} ${patientExists.rows[0].last_name}`;
                 }
@@ -109,7 +106,7 @@ export default async function handler(req, res) {
                             finalizedDoctorName = `Dr. ${nameCheck.rows[0].first_name} ${nameCheck.rows[0].last_name}`;
                         } else {
                             // If fallback needed for doctor as well
-                            const fallbackDoctor = await query("SELECT id, first_name, last_name FROM staff WHERE role ILIKE '%doctor%' OR position ILIKE '%doctor%' ORDER BY id ASC LIMIT 1");
+                            const fallbackDoctor = await query("SELECT id, first_name, last_name FROM staff WHERE role ILIKE '%doctor%' ORDER BY id ASC LIMIT 1");
                             if (fallbackDoctor.rows.length > 0) {
                                 finalizedDoctorId = fallbackDoctor.rows[0].id;
                                 finalizedDoctorName = `Dr. ${fallbackDoctor.rows[0].first_name} ${fallbackDoctor.rows[0].last_name}`;

@@ -60,8 +60,38 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (savedUser) {
           try {
             const parsed = JSON.parse(savedUser);
+
+            // Post-login ID alignment for dev mode
+            if (parsed.id?.startsWith('dev-') && parsed.name) {
+              const correctedId = `dev-${parsed.name.toLowerCase().trim().replace(/\s+/g, '-')}`;
+              if (parsed.id !== correctedId) {
+                console.warn(`[Auth] Correcting stale dev ID: ${parsed.id} -> ${correctedId}`);
+                parsed.id = correctedId;
+                localStorage.setItem('user', JSON.stringify(parsed));
+              }
+            }
+
             console.log('🔍 Auth-init: Restoring mock user session', parsed);
             setUser(parsed);
+
+            // Sync in dev mode as well
+            if (parsed.role === 'patient') {
+              const nameParts = parsed.name.trim().split(' ');
+              const fName = nameParts[0] || 'User';
+              const lName = nameParts.slice(1).join(' ') || 'Patient';
+              fetch('/api/patients', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                  id: parsed.id,
+                  firstName: fName,
+                  lastName: lName,
+                  email: parsed.email,
+                  status: 'ACTIVE',
+                  createdBy: 'DEV-AUTO-SYNC'
+                })
+              }).catch(err => console.error('Dev mode auto-sync failed:', err));
+            }
           } catch (e) {
             console.error('Failed to parse saved user:', e);
             localStorage.removeItem('user');
@@ -99,12 +129,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           // const profile = await kc.loadUserProfile();
           const profile = kc.idTokenParsed || {};
 
+          console.log('🔐 Keycloak Auth Success. Token Parsed:', profile);
+          console.log('🔐 Realm Access:', kc.realmAccess);
+          console.log('🔐 Resource Access:', kc.resourceAccess);
+
           // Map Keycloak roles to UserRole
           // This is a simplified mapping. In a real app, you'd check kc.realmAccess?.roles
           let role: UserRole = 'patient';
           if (kc.realmAccess?.roles.includes('admin')) role = 'admin';
           else if (kc.realmAccess?.roles.includes('doctor')) role = 'doctor';
           else if (kc.realmAccess?.roles.includes('receptionist')) role = 'receptionist';
+
+          console.log('🎭 Mapped Role:', role);
 
           const userData: User = {
             id: kc.subject || '',
@@ -116,6 +152,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
           setUser(userData);
           localStorage.setItem('user', JSON.stringify(userData));
+
 
           // Sync patient data with database if role is patient
           if (role === 'patient') {
@@ -171,16 +208,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Development fallback mode - simulate login
     if (USE_DEV_FALLBACK) {
       const username = options?.loginHint || 'admin';
+      const normalizedId = `dev-${username.toLowerCase().trim().replace(/\s+/g, '-')}`;
 
-      // Map username to role
-      let role: UserRole = 'admin';
-      if (username.toLowerCase().includes('doctor')) role = 'doctor';
-      else if (username.toLowerCase().includes('patient')) role = 'patient';
-      else if (username.toLowerCase().includes('receptionist') || username.toLowerCase().includes('reception')) role = 'receptionist';
+      // Map username to role (improved for better developer experience)
+      const usernameLower = username.toLowerCase();
+      let role: UserRole = 'patient'; // Default to patient for easier testing
+
+      // Explicit role checks based on common naming conventions
+      if (usernameLower.includes('doctor') || usernameLower.startsWith('dr') || usernameLower.includes('doc')) role = 'doctor';
+      else if (usernameLower.includes('receptionist') || usernameLower.includes('reception') || usernameLower.includes('admin')) role = 'receptionist'; // Assuming admin/reception share similar dashboard for now, or strict 'admin'
+
+      // Specific overrides for known test users
+      if (usernameLower === 'admin') role = 'admin';
+      if (usernameLower === 'reception') role = 'receptionist';
+
 
       const mockUser: User = {
-        id: `dev-${username}`,
-        email: `${username}@dev.local`,
+        id: normalizedId,
+        email: `${username.toLowerCase().trim().replace(/\s+/g, '.')}@dev.local`,
         name: username.charAt(0).toUpperCase() + username.slice(1),
         role,
         token: 'dev-mock-token',
@@ -188,6 +233,25 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
       setUser(mockUser);
       localStorage.setItem('user', JSON.stringify(mockUser));
+
+      // Sync in dev mode login
+      if (role === 'patient') {
+        const nameParts = mockUser.name.split(' ');
+        const fName = nameParts[0] || 'User';
+        const lName = nameParts.slice(1).join(' ') || 'Patient';
+        fetch('/api/patients', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            id: mockUser.id,
+            firstName: fName,
+            lastName: lName,
+            email: mockUser.email,
+            status: 'ACTIVE',
+            createdBy: 'DEV-LOGIN-SYNC'
+          })
+        }).catch(err => console.error('Dev mode login sync failed:', err));
+      }
 
       console.log('🔧 Development login successful:', { username, role });
       return;
@@ -202,11 +266,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     // Development fallback mode - simulate registration
     if (USE_DEV_FALLBACK) {
       console.log('🔧 Development registration: Simulating new patient registration');
+      const regUsername = devUserData?.name || 'New Patient';
+      const normalizedId = `dev-${regUsername.toLowerCase().trim().replace(/\s+/g, '-')}`;
+
       // In dev mode, just log them in as a new patient or use provided data
       const mockUser: User = {
-        id: `dev-new-patient-${Date.now()}`,
-        email: devUserData?.email || 'new.patient@dev.local',
-        name: devUserData?.name || 'New Patient',
+        id: devUserData?.id || normalizedId,
+        email: devUserData?.email || `${regUsername.toLowerCase().trim().replace(/\s+/g, '.')}@dev.local`,
+        name: regUsername,
         role: (devUserData?.role as UserRole) || 'patient',
         token: 'dev-mock-token-register',
       };

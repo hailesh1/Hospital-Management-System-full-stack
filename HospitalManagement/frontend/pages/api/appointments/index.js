@@ -6,17 +6,20 @@ export default async function handler(req, res) {
   switch (method) {
     case 'GET':
       try {
-        let { patient_id, doctor_id, status, date } = req.query;
+        let { patient_id, patientId, doctor_id, status, date, skip_translation, patient_name } = req.query;
+        patient_id = (patient_id || patientId || '').trim();
 
-        // Handle mock/demo patient IDs or missing patient IDs
+        console.log(`[API] GET /api/appointments: patient_id=${patient_id}`);
+
+        // Handle mock/development patient IDs
+        let patientExists = { rows: [] };
         if (patient_id) {
-          const idExists = await query('SELECT id FROM patients WHERE id = $1', [patient_id]);
-          if (idExists.rows.length === 0) {
-            console.log(`[API] GET: Patient ID ${patient_id} not found. Using fallback.`);
-            const defaultPatient = await query('SELECT id FROM patients ORDER BY id ASC LIMIT 1');
-            if (defaultPatient.rows.length > 0) {
-              patient_id = defaultPatient.rows[0].id;
-            }
+          patientExists = await query('SELECT id FROM patients WHERE LOWER(TRIM(id)) = LOWER(TRIM($1))', [patient_id]);
+          if (patientExists.rows.length === 0) {
+            console.warn(`[API] GET: Patient ID "${patient_id}" NOT FOUND even with TRIM/LOWER.`);
+            return res.status(200).json([]); // Return empty list instead of leaking data
+          } else {
+            console.log(`[API] GET: Patient ID "${patient_id}" confirmed.`);
           }
         }
 
@@ -45,7 +48,7 @@ export default async function handler(req, res) {
         }
 
         if (status) {
-          queryString += ` AND a.status = $${paramCount++}`;
+          queryString += ` AND LOWER(a.status) = LOWER($${paramCount++})`;
           queryParams.push(status);
         }
 
@@ -104,18 +107,12 @@ export default async function handler(req, res) {
               patient_id = nameCheck.rows[0].id;
               patientExists = nameCheck;
             } else {
-              const defaultPatient = await query('SELECT id, first_name, last_name FROM patients ORDER BY id ASC LIMIT 1');
-              if (defaultPatient.rows.length > 0) {
-                patient_id = defaultPatient.rows[0].id;
-                patientExists = defaultPatient;
-              }
+              // No fallback to default patient
+              console.warn(`[API] Patient with name "${searchName}" not found.`);
             }
           } else {
-            const defaultPatient = await query('SELECT id, first_name, last_name FROM patients ORDER BY id ASC LIMIT 1');
-            if (defaultPatient.rows.length > 0) {
-              patient_id = defaultPatient.rows[0].id;
-              patientExists = defaultPatient;
-            }
+            // No fallback to default patient
+            console.warn(`[API] Patient ID "${patient_id}" not found and no name provided.`);
           }
         }
 
@@ -136,7 +133,7 @@ export default async function handler(req, res) {
         // Handle mock doctor translation
         if (doctorExists.rows.length === 0) {
           console.log(`[API] POST: Doctor ID ${doctor_id} not found. Attempting translation/fallback.`);
-          const fallbackDoctor = await query("SELECT id, first_name, last_name FROM staff WHERE role ILIKE '%doctor%' OR position ILIKE '%doctor%' ORDER BY id ASC LIMIT 1");
+          const fallbackDoctor = await query("SELECT id, first_name, last_name FROM staff WHERE role ILIKE '%doctor%' ORDER BY id ASC LIMIT 1");
           if (fallbackDoctor.rows.length > 0) {
             doctor_id = fallbackDoctor.rows[0].id;
             doctorExists = fallbackDoctor;

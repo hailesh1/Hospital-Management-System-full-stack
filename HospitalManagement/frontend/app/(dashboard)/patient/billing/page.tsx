@@ -12,17 +12,26 @@ export default function PatientBillingPage() {
 
     useEffect(() => {
         const fetchInvoices = async () => {
-            if (!user?.id) return
+            if (!user?.id) {
+                console.log('⚠️ Billing: No user ID found, skipping fetch');
+                return;
+            }
 
             try {
                 // Fetch invoices for the logged-in patient
-                const res = await fetch(`/api/invoices?patient_id=${user.id}`)
+                console.log(`🔌 Billing: Fetching invoices for patientId=${user.id}`);
+                const res = await fetch(`/api/invoices?patientId=${user.id}`)
                 if (res.ok) {
                     const data = await res.json()
+                    console.log(`✅ Billing: Found ${data.length} invoices`);
                     setInvoices(data)
+                } else {
+                    console.error("❌ Billing: Failed to fetch invoices, status:", res.status);
+                    const errText = await res.text();
+                    console.error("   Response:", errText);
                 }
             } catch (error) {
-                console.error("Failed to fetch invoices", error)
+                console.error("❌ Billing: Exception fetching invoices", error)
             }
         }
         fetchInvoices()

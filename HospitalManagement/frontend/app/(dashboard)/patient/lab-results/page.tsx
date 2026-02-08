@@ -4,53 +4,33 @@ import { useState, useEffect } from "react"
 import { LabTestsTable } from "@/components/lab/lab-tests-table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Microscope, FileCheck, FlaskConical } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
 import type { LabTest } from "@/types"
 
 export default function PatientLabResultsPage() {
+    const { user } = useAuth()
     const [labTests, setLabTests] = useState<LabTest[]>([])
+    const [isLoading, setIsLoading] = useState(true)
 
     useEffect(() => {
-        const loadedTests = JSON.parse(localStorage.getItem("labTests") || "[]")
+        const fetchLabTests = async () => {
+            if (!user?.id) return
 
-        // Seed for John Doe if empty
-        if (loadedTests.length === 0) {
-            const mockTests: LabTest[] = [
-                {
-                    id: "L-001",
-                    patientId: "P-0001",
-                    patientName: "Dawit Alemu",
-                    testName: "Complete Blood Count",
-                    testType: "blood",
-                    orderedBy: "Dr. Hiwot Kebede",
-                    orderedDate: "2024-03-18",
-                    status: "completed",
-                    notes: "All values within normal range"
-                },
-                {
-                    id: "L-002",
-                    patientId: "P-0001",
-                    patientName: "Dawit Alemu",
-                    testName: "Lipid Profile",
-                    testType: "blood",
-                    orderedBy: "Dr. Hiwot Kebede",
-                    orderedDate: "2024-03-24",
-                    status: "ordered"
+            try {
+                const res = await fetch(`/api/lab-tests?patientId=${user.id}`)
+                if (res.ok) {
+                    const data = await res.json()
+                    setLabTests(data)
                 }
-            ]
-            setLabTests(mockTests)
-            localStorage.setItem("labTests", JSON.stringify(mockTests))
-        } else {
-            setLabTests(loadedTests.filter((t: any) => t.patientName === "Dawit Alemu" || t.patientId === "P-0001"))
+            } catch (error) {
+                console.error("Failed to fetch lab tests:", error)
+            } finally {
+                setIsLoading(false)
+            }
         }
-    }, [])
 
-    const handleUpdate = (updated: LabTest) => {
-        const updatedList = labTests.map(t => t.id === updated.id ? updated : t)
-        setLabTests(updatedList)
-
-        const all = JSON.parse(localStorage.getItem("labTests") || "[]")
-        localStorage.setItem("labTests", JSON.stringify(all.map((t: any) => t.id === updated.id ? updated : t)))
-    }
+        fetchLabTests()
+    }, [user])
 
     return (
         <div className="space-y-6 max-w-7xl mx-auto">
@@ -113,7 +93,7 @@ export default function PatientLabResultsPage() {
                     <CardTitle className="text-lg font-black text-white uppercase tracking-widest">Laboratory Test History</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <LabTestsTable tests={labTests} onUpdate={handleUpdate} />
+                    <LabTestsTable tests={labTests} onUpdate={() => { }} />
                 </CardContent>
             </Card>
         </div>

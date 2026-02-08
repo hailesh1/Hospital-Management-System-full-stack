@@ -25,27 +25,27 @@ export default async function handler(req, res) {
             'Busy': 'BUSY',
             'In Personal Break': 'IN_PERSONAL_BREAK',
             'Offline': 'AVAILABLE' // 'Offline' isn't in DB constraint, default to AVAILABLE or handle otherwise. Assuming AVAILABLE for now or maybe we shouldn't allow offline update if not in DB. 
-                                   // Wait, the constraint says: AVAILABLE, BUSY, IN_PERSONAL_BREAK.
+            // Wait, the constraint says: AVAILABLE, BUSY, IN_PERSONAL_BREAK.
         };
 
         // If status is not in map, default to AVAILABLE or throw? 
         // Let's check strict matching.
         let dbStatus = statusMap[status] || status.toUpperCase().replace(/ /g, '_');
-        
+
         // Validate against known DB values to be safe
         const allowedDbStatuses = ['AVAILABLE', 'BUSY', 'IN_PERSONAL_BREAK'];
         if (!allowedDbStatuses.includes(dbStatus)) {
-             // If "Offline" is passed but not in DB, maybe we just don't update or set to specific state?
-             // For now, let's map unknown to AVAILABLE to prevent crash, or keep original if it might be valid.
-             // But we know the constraint is strict.
-             if (status === 'Offline') {
-                 // Offline might just mean "Not showing in UI" but in DB they are "AVAILABLE" (or maybe we shouldn't touch DB?)
-                 // Let's assume we update to AVAILABLE for now, or maybe the user just logged out.
-                 dbStatus = 'AVAILABLE'; 
-             } else {
-                 console.warn(`[API] Invalid status ${status}, defaulting to AVAILABLE`);
-                 dbStatus = 'AVAILABLE';
-             }
+            // If "Offline" is passed but not in DB, maybe we just don't update or set to specific state?
+            // For now, let's map unknown to AVAILABLE to prevent crash, or keep original if it might be valid.
+            // But we know the constraint is strict.
+            if (status === 'Offline') {
+                // Offline might just mean "Not showing in UI" but in DB they are "AVAILABLE" (or maybe we shouldn't touch DB?)
+                // Let's assume we update to AVAILABLE for now, or maybe the user just logged out.
+                dbStatus = 'AVAILABLE';
+            } else {
+                console.warn(`[API] Invalid status ${status}, defaulting to AVAILABLE`);
+                dbStatus = 'AVAILABLE';
+            }
         }
 
         console.log(`[API] Final status to be saved (availability_status): ${dbStatus}`);
@@ -56,8 +56,8 @@ export default async function handler(req, res) {
         );
 
         if (result.rowCount === 0) {
-            console.warn(`[API] No staff found with ID: ${id}`);
-            return res.status(404).json({ error: 'Staff member not found' });
+            console.log(`[API] Not updating status: ID ${id} not found in staff table (likely a patient or non-staff user).`);
+            return res.status(200).json({ message: 'No staff record found to update, skipped gracefully.' });
         }
 
         console.log(`[API] Successfully updated status for ${result.rows[0].first_name} to ${dbStatus}`);

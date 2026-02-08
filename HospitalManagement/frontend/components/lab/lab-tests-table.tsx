@@ -57,7 +57,9 @@ export function LabTestsTable({ tests, onUpdate }: LabTestsTableProps) {
                 <TableCell className="font-semibold">{test.patientName}</TableCell>
                 <TableCell className="font-black text-red-600 tracking-tight">{test.testName}</TableCell>
                 <TableCell className="capitalize font-medium">{test.testType}</TableCell>
-                <TableCell className="font-bold text-gray-700">{new Date(test.orderedDate).toLocaleDateString()}</TableCell>
+                <TableCell className="font-bold text-gray-700">
+                  {test.orderedDate ? new Date(test.orderedDate).toLocaleDateString() : 'N/A'}
+                </TableCell>
                 <TableCell>
                   <Badge className={getStatusColor(test.status)}>{test.status}</Badge>
                 </TableCell>

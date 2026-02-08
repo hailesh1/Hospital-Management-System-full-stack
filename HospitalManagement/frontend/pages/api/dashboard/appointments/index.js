@@ -21,7 +21,7 @@ export default async function handler(req, res) {
             }
         }
 
-        let whereClause = "DATE(a.appointment_date AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Addis_Ababa') = CURRENT_DATE";
+        let whereClause = "a.date = DATE(CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Addis_Ababa')";
         const queryParams = [];
 
         if (doctor_id) {
@@ -32,19 +32,20 @@ export default async function handler(req, res) {
         const result = await query(`
             SELECT 
                 a.id,
-                to_char(a.appointment_date, 'HH12:MI AM') as time,
-                to_char(a.appointment_date, 'YYYY-MM-DD') as date_iso,
+                a.time as time,
+                to_char(a.date, 'YYYY-MM-DD') as date_iso,
                 COALESCE(NULLIF(CONCAT(p.first_name, ' ', p.last_name), ' '), a.patient_name) as "patientName",
                 COALESCE(NULLIF(CONCAT(d.first_name, ' ', d.last_name), ' '), a.doctor_name) as "doctorName",
                 a.status,
-                COALESCE(a.reason, a.type, 'General Checkup') as type,
+                COALESCE(NULLIF(a.type, ''), 'General Checkup') as type,
                 p.id as "patientId"
             FROM appointments a
             LEFT JOIN patients p ON a.patient_id = p.id
             LEFT JOIN staff d ON a.doctor_id = d.id
             WHERE ${whereClause}
-            ORDER BY a.appointment_date ASC
+            ORDER BY a.date ASC, a.time ASC
         `, queryParams);
+
 
         res.status(200).json(result.rows);
     } catch (error) {

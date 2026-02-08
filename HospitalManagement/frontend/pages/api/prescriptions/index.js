@@ -54,162 +54,176 @@ async function getAllowedStatuses() {
 }
 
 export default async function handler(req, res) {
-    const { method } = req;
+  const { method } = req;
 
-    switch (method) {
-        case 'GET':
-            try {
-                const { patient_id } = req.query;
-                let text = 'SELECT * FROM prescriptions';
-                let values = [];
+  switch (method) {
+    case 'GET':
+      try {
+        let { patient_id, patientId } = req.query;
+        patient_id = (patientId || patient_id || '').trim();
 
-                if (patient_id) {
-                    text += ' WHERE patient_id = $1';
-                    values.push(patient_id);
-                }
+        console.log(`[API] GET /api/prescriptions: patient_id=${patient_id}`);
 
-                text += ' ORDER BY created_at DESC';
-                const result = await query(text, values);
+        // Handle mock/demo patient IDs
+        if (patient_id) {
+          const idExists = await query('SELECT id FROM patients WHERE LOWER(TRIM(id)) = LOWER(TRIM($1))', [patient_id]);
+          if (idExists.rows.length === 0) {
+            console.warn(`[API] GET: Patient ID "${patient_id}" NOT FOUND even with TRIM/LOWER.`);
+            return res.status(200).json([]);
+          }
+          console.log(`[API] GET: Patient ID "${patient_id}" confirmed.`);
+        }
 
-                const mapped = result.rows.map(row => ({
-                    id: row.id,
-                    patientId: row.patient_id,
-                    patientName: row.patient_name,
-                    medicationName: row.medication_name,
-                    dosage: row.dosage,
-                    frequency: row.frequency,
-                    duration: row.duration,
-                    prescribedBy: row.prescribed_by,
-                    prescribedDate: row.prescribed_date ? new Date(row.prescribed_date).toISOString().split('T')[0] : null,
-                    status: row.status,
-                    refillsRemaining: row.refills_remaining,
-                    notes: row.notes
-                }));
+        let text = 'SELECT * FROM prescriptions';
+        let values = [];
 
-                res.status(200).json(mapped);
-            } catch (error) {
-                console.error('Error fetching prescriptions:', error);
-                res.status(500).json({ error: 'Failed to fetch prescriptions' });
-            }
-            break;
+        if (patient_id) {
+          text += ' WHERE patient_id = $1';
+          values.push(patient_id);
+        }
 
-        case 'POST':
-            try {
-                let { patientId, medicationName, dosage, frequency, duration, prescribedBy, refillsRemaining, notes, doctorId } = req.body;
+        text += ' ORDER BY created_at DESC';
+        const result = await query(text, values);
 
-                if (!patientId || !medicationName) {
-                    return res.status(400).json({ error: 'Patient ID and Medication Name are required' });
-                }
+        const mapped = result.rows.map(row => ({
+          id: row.id,
+          patientId: row.patient_id,
+          patientName: row.patient_name,
+          medicationName: row.medication_name,
+          dosage: row.dosage,
+          frequency: row.frequency,
+          duration: row.duration,
+          prescribedBy: row.prescribed_by,
+          prescribedDate: row.prescribed_date ? new Date(row.prescribed_date).toISOString().split('T')[0] : null,
+          status: row.status,
+          refillsRemaining: row.refills_remaining,
+          notes: row.notes
+        }));
 
-                let patientName = 'Unknown';
-                // Translate human-readable patientId and fetch name in a single step when possible
-                if (patientId && (patientId.length < 32 || !patientId.includes('-'))) {
-                    const patientCheck = await query(
-                      "SELECT id, first_name || ' ' || last_name AS name FROM patients WHERE id::text ILIKE $1 OR first_name || ' ' || last_name ILIKE $2 LIMIT 1",
-                      [`%${patientId}%`, `%${patientId}%`]
-                    );
-                    if (patientCheck.rows.length > 0) {
-                        patientId = patientCheck.rows[0].id;
-                        patientName = patientCheck.rows[0].name || 'Unknown';
-                    }
-                }
-                if (patientName === 'Unknown') {
-                    const patientRes = await query('SELECT first_name || \' \' || last_name as name FROM patients WHERE id = $1', [patientId]);
-                    patientName = patientRes.rows.length > 0 ? patientRes.rows[0].name : 'Unknown';
-                }
+        res.status(200).json(mapped);
+      } catch (error) {
+        console.error('Error fetching prescriptions:', error);
+        res.status(500).json({ error: 'Failed to fetch prescriptions' });
+      }
+      break;
 
-                const colsRes = { rows: await getPrescriptionsColumns() };
-                const cols = new Map(colsRes.rows.map(r => [r.column_name, { data_type: r.data_type, is_nullable: r.is_nullable, column_default: r.column_default }]));
+    case 'POST':
+      try {
+        let { patientId, medicationName, dosage, frequency, duration, prescribedBy, refillsRemaining, notes, doctorId } = req.body;
 
-                const desired = [
-                  ['patient_id', patientId],
-                  ['patient_name', patientName],
-                  ['medication_name', medicationName],
-                  ['dosage', dosage],
-                  ['frequency', frequency],
-                  ['duration', duration],
-                  ['prescribed_by', prescribedBy],
-                  ['refills_remaining', refillsRemaining ?? 0],
-                  ['notes', notes],
-                ];
+        if (!patientId || !medicationName) {
+          return res.status(400).json({ error: 'Patient ID and Medication Name are required' });
+        }
 
-                const allCols = [];
-                const allValues = [];
-                for (const [col, val] of desired) {
-                  if (cols.has(col)) {
-                    allCols.push(col);
-                    allValues.push(val);
-                  }
-                }
+        let patientName = 'Unknown';
+        // Translate human-readable patientId and fetch name in a single step when possible
+        if (patientId && (patientId.length < 32 || !patientId.includes('-'))) {
+          const patientCheck = await query(
+            "SELECT id, first_name || ' ' || last_name AS name FROM patients WHERE id::text ILIKE $1 OR first_name || ' ' || last_name ILIKE $2 LIMIT 1",
+            [`%${patientId}%`, `%${patientId}%`]
+          );
+          if (patientCheck.rows.length > 0) {
+            patientId = patientCheck.rows[0].id;
+            patientName = patientCheck.rows[0].name || 'Unknown';
+          }
+        }
+        if (patientName === 'Unknown') {
+          const patientRes = await query('SELECT first_name || \' \' || last_name as name FROM patients WHERE id = $1', [patientId]);
+          patientName = patientRes.rows.length > 0 ? patientRes.rows[0].name : 'Unknown';
+        }
 
-                if (cols.has('id')) {
-                  const meta = cols.get('id');
-                  const hasDefault = meta.column_default !== null;
-                  if (!hasDefault) {
-                    allCols.unshift('id');
-                    allValues.unshift(randomUUID());
-                  }
-                }
+        const colsRes = { rows: await getPrescriptionsColumns() };
+        const cols = new Map(colsRes.rows.map(r => [r.column_name, { data_type: r.data_type, is_nullable: r.is_nullable, column_default: r.column_default }]));
 
-                // doctor_id: include only if column exists, and either value provided or column is nullable/defaulted
-                if (cols.has('doctor_id')) {
-                  const meta = cols.get('doctor_id');
-                  const nullable = String(meta.is_nullable || '').toUpperCase() === 'YES';
-                  const hasDefault = meta.column_default !== null;
-                  const hasValue = doctorId !== undefined && doctorId !== null && String(doctorId).length > 0;
-                  if (!nullable && !hasDefault && !hasValue) {
-                    return res.status(400).json({ error: 'Doctor ID is required', details: 'doctor_id is NOT NULL and has no default in prescriptions table' });
-                  }
-                  allCols.push('doctor_id');
-                  allValues.push(hasValue ? doctorId : null);
-                }
+        const desired = [
+          ['patient_id', patientId],
+          ['patient_name', patientName],
+          ['medication_name', medicationName],
+          ['dosage', dosage],
+          ['frequency', frequency],
+          ['duration', duration],
+          ['prescribed_by', prescribedBy],
+          ['refills_remaining', refillsRemaining ?? 0],
+          ['notes', notes],
+        ];
 
-                // status: include if column exists; provide a sensible default ('active')
-                if (cols.has('status')) {
-                  const meta = cols.get('status');
-                  const hasDefault = meta.column_default !== null;
-                  if (!hasDefault) {
-                    const allowed = await getAllowedStatuses();
-                    const chosen = allowed.length > 0 ? allowed[0] : 'PENDING';
-                    allCols.push('status');
-                    allValues.push(chosen);
-                  }
-                }
+        const allCols = [];
+        const allValues = [];
+        for (const [col, val] of desired) {
+          if (cols.has(col)) {
+            allCols.push(col);
+            allValues.push(val);
+          }
+        }
 
-                let dateCol = null;
-                if (cols.has('prescribed_date')) {
-                  dateCol = 'prescribed_date';
-                } else if (cols.has('created_at')) {
-                  dateCol = 'created_at';
-                } else if (cols.has('date')) {
-                  dateCol = 'date';
-                }
+        if (cols.has('id')) {
+          const meta = cols.get('id');
+          const hasDefault = meta.column_default !== null;
+          if (!hasDefault) {
+            allCols.unshift('id');
+            allValues.unshift(randomUUID());
+          }
+        }
 
-                const placeholders = allCols.map((_, i) => `$${i + 1}`).join(', ');
-                const nowExpr = dateCol === 'date' ? 'CURRENT_DATE' : 'NOW()';
+        // doctor_id: include only if column exists, and either value provided or column is nullable/defaulted
+        if (cols.has('doctor_id')) {
+          const meta = cols.get('doctor_id');
+          const nullable = String(meta.is_nullable || '').toUpperCase() === 'YES';
+          const hasDefault = meta.column_default !== null;
+          const hasValue = doctorId !== undefined && doctorId !== null && String(doctorId).length > 0;
+          if (!nullable && !hasDefault && !hasValue) {
+            return res.status(400).json({ error: 'Doctor ID is required', details: 'doctor_id is NOT NULL and has no default in prescriptions table' });
+          }
+          allCols.push('doctor_id');
+          allValues.push(hasValue ? doctorId : null);
+        }
 
-                const text = `
+        // status: include if column exists; provide a sensible default ('active')
+        if (cols.has('status')) {
+          const meta = cols.get('status');
+          const hasDefault = meta.column_default !== null;
+          if (!hasDefault) {
+            const allowed = await getAllowedStatuses();
+            const chosen = allowed.length > 0 ? allowed[0] : 'PENDING';
+            allCols.push('status');
+            allValues.push(chosen);
+          }
+        }
+
+        let dateCol = null;
+        if (cols.has('prescribed_date')) {
+          dateCol = 'prescribed_date';
+        } else if (cols.has('created_at')) {
+          dateCol = 'created_at';
+        } else if (cols.has('date')) {
+          dateCol = 'date';
+        }
+
+        const placeholders = allCols.map((_, i) => `$${i + 1}`).join(', ');
+        const nowExpr = dateCol === 'date' ? 'CURRENT_DATE' : 'NOW()';
+
+        const text = `
                     INSERT INTO prescriptions (${[...allCols, ...(dateCol ? [dateCol] : [])].join(', ')})
                     VALUES (${placeholders}${dateCol ? `, ${nowExpr}` : ''})
                     RETURNING *
                 `;
-                const values = allValues;
+        const values = allValues;
 
-                const result = await query(text, values);
-                res.status(201).json(result.rows[0]);
-            } catch (error) {
-                console.error('Error creating prescription:', error);
-                res.status(500).json({
-                  error: 'Failed to create prescription',
-                  details: error.message,
-                  code: error.code,
-                  hint: 'Ensure doctor_id/status constraints allow NULL or have defaults, and that patient_id exists.'
-                });
-            }
-            break;
+        const result = await query(text, values);
+        res.status(201).json(result.rows[0]);
+      } catch (error) {
+        console.error('Error creating prescription:', error);
+        res.status(500).json({
+          error: 'Failed to create prescription',
+          details: error.message,
+          code: error.code,
+          hint: 'Ensure doctor_id/status constraints allow NULL or have defaults, and that patient_id exists.'
+        });
+      }
+      break;
 
-        default:
-            res.setHeader('Allow', ['GET', 'POST']);
-            res.status(405).end(`Method ${method} Not Allowed`);
-    }
+    default:
+      res.setHeader('Allow', ['GET', 'POST']);
+      res.status(405).end(`Method ${method} Not Allowed`);
+  }
 }

@@ -9,8 +9,16 @@ export default async function handler(req, res) {
   switch (method) {
     case 'GET':
       try {
-        const result = await query('SELECT * FROM patients WHERE id = $1', [id]);
+        const trimmedId = (id || '').trim();
+        console.log(`[API] GET /api/patients/${trimmedId}`);
+
+        // Debug: List all patient IDs to console
+        const allPatients = await query('SELECT id FROM patients');
+        console.log('[API] Patients in DB:', allPatients.rows.map(r => `"${r.id}"`).join(', '));
+
+        const result = await query('SELECT * FROM patients WHERE id = $1', [trimmedId]);
         if (result.rows.length === 0) {
+          console.warn(`[API] GET: Patient "${trimmedId}" NOT FOUND in the list above.`);
           return res.status(404).json({ message: 'Patient not found' });
         }
         res.status(200).json(result.rows[0]);

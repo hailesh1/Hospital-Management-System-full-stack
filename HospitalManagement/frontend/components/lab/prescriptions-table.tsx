@@ -53,7 +53,9 @@ export function PrescriptionsTable({ prescriptions, onUpdate }: PrescriptionsTab
                 <TableCell className="font-semibold">{prescription.patientName}</TableCell>
                 <TableCell className="font-black text-red-600 tracking-tight">{prescription.medicationName}</TableCell>
                 <TableCell className="font-medium">{prescription.dosage}</TableCell>
-                <TableCell>{new Date(prescription.prescribedDate).toLocaleDateString()}</TableCell>
+                <TableCell>
+                  {prescription.prescribedDate ? new Date(prescription.prescribedDate).toLocaleDateString() : 'N/A'}
+                </TableCell>
                 <TableCell>
                   <Badge className={getStatusColor(prescription.status)}>{prescription.status}</Badge>
                 </TableCell>

@@ -4,57 +4,34 @@ import { useState, useEffect } from "react"
 import { PrescriptionsTable } from "@/components/lab/prescriptions-table"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Pill, Activity, AlertCircle } from "lucide-react"
+import { useAuth } from "@/contexts/auth-context"
 import type { Prescription } from "@/types"
 
 export default function PatientPrescriptionsPage() {
+    const { user } = useAuth()
     const [prescriptions, setPrescriptions] = useState<Prescription[]>([])
+    const [isLoading, setIsLoading] = useState(true)
 
     useEffect(() => {
-        const loadedPrescriptions = JSON.parse(localStorage.getItem("prescriptions") || "[]")
+        const fetchPrescriptions = async () => {
+            if (!user?.id) return
 
-        // Seed with mock data for John Doe if empty
-        if (loadedPrescriptions.length === 0) {
-            const mockPrescriptions: Prescription[] = [
-                {
-                    id: "RX-1",
-                    patientId: "P-0001",
-                    patientName: "Dawit Alemu",
-                    medicationName: "Amoxicillin",
-                    dosage: "500mg",
-                    frequency: "3 times daily",
-                    duration: "7 days",
-                    prescribedBy: "Dr. Tariku Alemu",
-                    prescribedDate: "2024-03-20",
-                    status: "active",
-                    notes: "Take after meals"
-                },
-                {
-                    id: "RX-2",
-                    patientId: "P-0001",
-                    patientName: "Dawit Alemu",
-                    medicationName: "Lisinopril",
-                    dosage: "10mg",
-                    frequency: "Once daily",
-                    duration: "30 days",
-                    prescribedBy: "Dr. Hiwot Kebede",
-                    prescribedDate: "2024-03-15",
-                    status: "active"
+            try {
+                const res = await fetch(`/api/prescriptions?patientId=${user.id}`)
+                if (res.ok) {
+                    const data = await res.json()
+                    setPrescriptions(data)
                 }
-            ]
-            setPrescriptions(mockPrescriptions)
-            localStorage.setItem("prescriptions", JSON.stringify(mockPrescriptions))
-        } else {
-            setPrescriptions(loadedPrescriptions.filter((rx: any) => rx.patientName === "Dawit Alemu" || rx.patientId === "P-0001"))
+            } catch (error) {
+                console.error("Failed to fetch prescriptions:", error)
+            } finally {
+                setIsLoading(false)
+            }
         }
-    }, [])
 
-    const handleUpdate = (updated: Prescription) => {
-        const updatedList = prescriptions.map(p => p.id === updated.id ? updated : p)
-        setPrescriptions(updatedList)
+        fetchPrescriptions()
+    }, [user])
 
-        const all = JSON.parse(localStorage.getItem("prescriptions") || "[]")
-        localStorage.setItem("prescriptions", JSON.stringify(all.map((p: any) => p.id === updated.id ? updated : p)))
-    }
 
     return (
         <div className="space-y-6 max-w-7xl mx-auto">
@@ -117,7 +94,7 @@ export default function PatientPrescriptionsPage() {
                     <CardTitle className="text-lg font-black text-white uppercase tracking-widest">Current Medications</CardTitle>
                 </CardHeader>
                 <CardContent className="p-0">
-                    <PrescriptionsTable prescriptions={prescriptions} onUpdate={handleUpdate} />
+                    <PrescriptionsTable prescriptions={prescriptions} onUpdate={() => { }} />
                 </CardContent>
             </Card>
         </div>

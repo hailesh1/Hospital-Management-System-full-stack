@@ -44,7 +44,7 @@ async function getAllowedStatuses() {
             }
         }
         allowed = Array.from(new Set(allowed));
-        
+
         if (allowed.length === 0) {
             console.warn('No statuses found from DB constraint, using fallback');
             allowed = ['PAID', 'PENDING', 'OVERDUE', 'CANCELLED'];
@@ -65,19 +65,20 @@ export default async function handler(req, res) {
     switch (method) {
         case 'GET':
             try {
-                let { patient_id } = req.query;
+                let { patient_id, patientId } = req.query;
+                patient_id = (patient_id || patientId || '').trim();
+
+                console.log(`[API] GET /api/invoices: patient_id=${patient_id}`);
 
                 // Handle mock/demo patient IDs only if they don't exist in the database
                 if (patient_id) {
-                    const idExists = await query('SELECT id FROM patients WHERE id = $1', [patient_id]);
+                    const idExists = await query('SELECT id FROM patients WHERE LOWER(TRIM(id)) = LOWER(TRIM($1))', [patient_id]);
                     if (idExists.rows.length === 0) {
-                        if (patient_id === '3' || !patient_id.includes('-')) {
-                            const defaultPatient = await query('SELECT id FROM patients LIMIT 1');
-                            if (defaultPatient.rows.length > 0) {
-                                patient_id = defaultPatient.rows[0].id;
-                            }
-                        }
+                        console.warn(`[API] GET: Patient ID "${patient_id}" NOT FOUND even with TRIM/LOWER.`);
+                        // Return empty instead of falling back to a random patient
+                        return res.status(200).json([]);
                     }
+                    console.log(`[API] GET: Patient ID "${patient_id}" confirmed.`);
                 }
 
                 let queryString = `

@@ -30,10 +30,12 @@ Receptionist	haile.adugna	haile.adugna@hms.com	password
 Receptionist	sara.tekelle	sara.tekelle@hms.com	password
 
 
+Email: akelilu@example.com
+Password: password
+
+username akelilu.besufekad and password password.
+
 c:\Projects\HospitalManagement\backend\fix_and_start_keycloak.bat
-
-
-
 
 
 Role	Username	Password
@@ -44,3 +46,20 @@ Patient	alem.tadesse	password
 Patient	metsi.yohannes	password
 Receptionist	haile.adugna	password
 Receptionist	sara.tekelle	password
+
+
+🎉 VALIDATION COMPLETE
+You can now login with:
+- akelilu / password123 -> Should redirect to patient dashboard
+- doctor_smith / password123 -> Should redirect to doctor dashboard
+- reception_jane / password123 -> Should redirect to receptionist dashboard
+- dawit.kebede / password123 -> Should redirect to doctor dashboard
+
+
+
+
+
+
+
+
+

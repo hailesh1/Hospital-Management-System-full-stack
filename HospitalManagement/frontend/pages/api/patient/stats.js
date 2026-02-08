@@ -6,21 +6,26 @@ export default async function handler(req, res) {
         return res.status(405).end(`Method ${req.method} Not Allowed`);
     }
 
-    const { patientId: queryPatientId } = req.query;
-
     try {
-        let patientId = queryPatientId;
+        let { patientId: queryPatientId, patient_id } = req.query;
+        let patientId = (queryPatientId || patient_id || '').trim();
+
+        console.log(`[API] GET /api/patient/stats: patientId=${patientId}`);
 
         // Handle mock/development patient IDs or missing IDs
         if (patientId) {
-            const patientExists = await query('SELECT id FROM patients WHERE id = $1', [patientId]);
+            const patientExists = await query('SELECT id FROM patients WHERE LOWER(TRIM(id)) = LOWER(TRIM($1))', [patientId]);
             if (patientExists.rows.length === 0) {
-                console.log(`[API] Stats: Patient ID ${patientId} not found. Using fallback.`);
-                const fallbackPatient = await query('SELECT id FROM patients ORDER BY id ASC LIMIT 1');
-                if (fallbackPatient.rows.length > 0) {
-                    patientId = fallbackPatient.rows[0].id;
-                }
+                console.log(`[API] Stats: Patient ID "${patientId}" NOT FOUND even with TRIM/LOWER.`);
+                return res.status(200).json({
+                    upcomingAppointments: 0,
+                    medicalRecords: 0,
+                    prescriptions: 0,
+                    messages: 0,
+                    nextAppointment: null
+                });
             }
+            console.log(`[API] Stats: Patient ID "${patientId}" confirmed.`);
         }
 
         if (!patientId) {
@@ -43,14 +48,14 @@ export default async function handler(req, res) {
                 }
                 return defaultVal;
             } catch (err) {
-                console.error(`Query failed: ${sql}`, err.message);
+                console.error(`Query failed: ${sql} `, err.message);
                 return defaultVal;
             }
         };
 
         const appointmentsCount = await safeQuery('SELECT COUNT(*) as count FROM appointments WHERE patient_id = $1 AND appointment_date >= NOW()', [patientId]);
         const recordsCount = await safeQuery('SELECT COUNT(*) as count FROM medical_records WHERE patient_id = $1', [patientId]);
-        const prescriptionsCount = await safeQuery('SELECT COUNT(*) as count FROM prescriptions WHERE patient_id = $1 AND status = \'active\'', [patientId]);
+        const prescriptionsCount = await safeQuery('SELECT COUNT(*) as count FROM prescriptions WHERE patient_id = $1 AND LOWER(status) = \'active\'', [patientId]);
         const messagesCount = await safeQuery("SELECT COUNT(*) as count FROM messages WHERE receiver_id = $1 AND is_read = false", [patientId]);
         const nextAppt = await safeQuery('SELECT appointment_date FROM appointments WHERE patient_id = $1 AND appointment_date >= NOW() ORDER BY appointment_date ASC LIMIT 1', [patientId], null);
 

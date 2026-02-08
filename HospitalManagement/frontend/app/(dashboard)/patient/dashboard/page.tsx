@@ -15,25 +15,34 @@ export default function PatientDashboardPage() {
     messages: 0,
     nextAppointment: null
   });
+  const [appointments, setAppointments] = useState<any[]>([]);
 
   useEffect(() => {
-    const fetchStats = async () => {
+    const fetchData = async () => {
       try {
-        // Use user ID from auth context if available
         const id = user?.id || '';
-        const res = await fetch(`/api/patient/stats${id ? `?patientId=${id}` : ''}`);
-        if (res.ok) {
-          const data = await res.json();
-          // Ensure we don't overwrite stats with an error object
+        if (!id) return;
+
+        // Fetch Stats
+        const statsRes = await fetch(`/api/patient/stats?patientId=${id}`);
+        if (statsRes.ok) {
+          const data = await statsRes.json();
           if (data && !data.error) {
             setStats(data);
           }
         }
+
+        // Fetch Appointments
+        const apptsRes = await fetch(`/api/appointments?patientId=${id}&status=scheduled`);
+        if (apptsRes.ok) {
+          const data = await apptsRes.json();
+          setAppointments(data.slice(0, 3));
+        }
       } catch (error) {
-        console.error("Failed to fetch patient stats", error);
+        console.error("Failed to fetch dashboard data", error);
       }
     };
-    fetchStats();
+    fetchData();
   }, [user]);
 
   const statCards = [
@@ -117,45 +126,43 @@ export default function PatientDashboardPage() {
             </Link>
           </CardHeader>
           <CardContent className="p-8 space-y-6">
-            {[
-              {
-                date: 'Tomorrow',
-                time: '10:00 AM',
-                doctor: 'DR Hiwot Ketma',
-                type: 'Follow-up',
-                speciality: 'Cardiology'
-              },
-              {
-                date: 'Friday, June 10',
-                time: '02:30 PM',
-                doctor: 'DR Alemu Belay',
-                type: 'Lab Test',
-                speciality: 'Pathology'
-              },
-            ].map((appt, i) => (
-              <div key={i} className="flex items-center p-6 border-2 border-red-50 rounded-2xl transition-all duration-300 hover:bg-red-600 hover:border-red-600 hover:shadow-xl group cursor-pointer hover:-translate-y-1">
-                <div className="text-center bg-red-50 p-4 rounded-xl mr-6 group-hover:bg-white/20 transition-colors">
-                  <div className="text-xs font-black text-red-600 group-hover:text-white uppercase">{appt.date.split(',')[0]}</div>
-                  <div className="text-2xl font-black text-red-900 group-hover:text-white leading-none mt-1">{appt.time.split(' ')[0]}</div>
-                  <div className="text-[10px] font-black text-red-600/60 group-hover:text-white uppercase leading-none mt-1">{appt.time.split(' ')[1]}</div>
+            {appointments.length > 0 ? (
+              appointments.map((appt, i) => (
+                <div key={i} className="flex items-center p-6 border-2 border-red-50 rounded-2xl transition-all duration-300 hover:bg-red-600 hover:border-red-600 hover:shadow-xl group cursor-pointer hover:-translate-y-1">
+                  <div className="text-center bg-red-50 p-4 rounded-xl mr-6 group-hover:bg-white/20 transition-colors">
+                    <div className="text-xs font-black text-red-600 group-hover:text-white uppercase">
+                      {new Date(appt.date).toLocaleDateString(undefined, { weekday: 'short' })}
+                    </div>
+                    <div className="text-2xl font-black text-red-900 group-hover:text-white leading-none mt-1">
+                      {appt.time.split(':')[0]}
+                    </div>
+                    <div className="text-[10px] font-black text-red-600/60 group-hover:text-white uppercase leading-none mt-1">
+                      {appt.time.includes(' ') ? appt.time.split(' ')[1] : ''}
+                    </div>
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-xl font-black text-gray-900 group-hover:text-white transition-colors">{appt.doctor_name || 'Doctor'}</p>
+                    <p className="text-sm font-bold text-red-600 group-hover:text-red-100 transition-colors uppercase tracking-widest">{appt.specialization_name || 'General'}</p>
+                    <span className="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-[10px] font-black text-red-700 mt-3 uppercase tracking-tighter group-hover:bg-white group-hover:text-red-600">
+                      {appt.type || 'Consultation'}
+                    </span>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <button className="p-3 rounded-xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all group-hover:bg-white group-hover:text-red-600 shadow-sm">
+                      <Icons.moreHorizontal className="h-5 w-5" />
+                    </button>
+                  </div>
                 </div>
-                <div className="flex-1">
-                  <p className="text-xl font-black text-gray-900 group-hover:text-white transition-colors">{appt.doctor}</p>
-                  <p className="text-sm font-bold text-red-600 group-hover:text-red-100 transition-colors uppercase tracking-widest">{appt.speciality}</p>
-                  <span className="inline-flex items-center rounded-full bg-red-100 px-3 py-1 text-[10px] font-black text-red-700 mt-3 uppercase tracking-tighter group-hover:bg-white group-hover:text-red-600">
-                    {appt.type}
-                  </span>
-                </div>
-                <div className="flex flex-col gap-2">
-                  {/* <button className="p-3 rounded-xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all group-hover:bg-white group-hover:text-red-600 shadow-sm">
-                    <Icons.messageSquare className="h-5 w-5" />
-                  </button> */}
-                  <button className="p-3 rounded-xl bg-red-50 text-red-600 hover:bg-red-600 hover:text-white transition-all group-hover:bg-white group-hover:text-red-600 shadow-sm">
-                    <Icons.moreHorizontal className="h-5 w-5" />
-                  </button>
-                </div>
+              ))
+            ) : (
+              <div className="py-12 text-center bg-red-50/30 rounded-2xl border-2 border-dashed border-red-100">
+                <Icons.calendar className="h-12 w-12 text-red-200 mx-auto mb-4" />
+                <p className="text-xl font-black text-red-900/40 uppercase tracking-widest">No Upcoming Visits</p>
+                <Link href="/patient/appointments">
+                  <button className="mt-4 text-sm font-black text-red-600 hover:text-red-700 underline underline-offset-4 uppercase tracking-widest">Book an appointment</button>
+                </Link>
               </div>
-            ))}
+            )}
           </CardContent>
         </Card>
 
