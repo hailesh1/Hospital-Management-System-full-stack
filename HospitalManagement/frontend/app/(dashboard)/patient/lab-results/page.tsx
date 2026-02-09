@@ -17,7 +17,7 @@ export default function PatientLabResultsPage() {
             if (!user?.id) return
 
             try {
-                const res = await fetch(`/api/lab-tests?patientId=${user.id}`)
+                const res = await fetch(`/api/lab-tests?patientId=${user.id}${user?.email ? `&email=${encodeURIComponent(user.email)}` : ''}`)
                 if (res.ok) {
                     const data = await res.json()
                     setLabTests(data)

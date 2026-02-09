@@ -59,10 +59,11 @@ export default async function handler(req, res) {
   switch (method) {
     case 'GET':
       try {
-        let { patient_id, patientId } = req.query;
+        let { patient_id, patientId, email, patientEmail } = req.query;
         patient_id = (patientId || patient_id || '').trim();
+        const emailParam = (patientEmail || email || '').trim();
 
-        console.log(`[API] GET /api/prescriptions: patient_id=${patient_id}`);
+        console.log(`[API] GET /api/prescriptions: patient_id=${patient_id} email=${emailParam}`);
 
         // Handle mock/demo patient IDs and accept emails
         if (patient_id) {
@@ -71,12 +72,28 @@ export default async function handler(req, res) {
             [patient_id]
           );
           if (idExists.rows.length === 0) {
-            console.warn(`[API] GET: Patient ID "${patient_id}" NOT FOUND even with TRIM/LOWER.`);
-            return res.status(200).json([]);
+            console.warn(`[API] GET: Patient ID "${patient_id}" NOT FOUND even with TRIM/LOWER. Trying email fallback...`);
+            if (emailParam) {
+              const byEmail = await query("SELECT id FROM patients WHERE LOWER(TRIM(email)) = LOWER(TRIM($1)) LIMIT 1", [emailParam]);
+              if (byEmail.rows.length > 0) {
+                patient_id = byEmail.rows[0].id;
+                console.log(`[API] GET: Resolved by email to ID "${patient_id}".`);
+              } else {
+                return res.status(200).json([]);
+              }
+            } else {
+              return res.status(200).json([]);
+            }
           }
           // If an email was passed, normalize to the real patient id
           patient_id = idExists.rows[0].id;
           console.log(`[API] GET: Patient resolved to ID "${patient_id}".`);
+        } else if (emailParam) {
+          const byEmail = await query("SELECT id FROM patients WHERE LOWER(TRIM(email)) = LOWER(TRIM($1)) LIMIT 1", [emailParam]);
+          if (byEmail.rows.length > 0) {
+            patient_id = byEmail.rows[0].id;
+            console.log(`[API] GET: Resolved by email to ID "${patient_id}".`);
+          }
         }
 
         let text = 'SELECT * FROM prescriptions';

@@ -20,7 +20,7 @@ export default function PatientBillingPage() {
             try {
                 // Fetch invoices for the logged-in patient
                 console.log(`🔌 Billing: Fetching invoices for patientId=${user.id}`);
-                const res = await fetch(`/api/invoices?patientId=${user.id}`)
+                const res = await fetch(`/api/invoices?patientId=${user.id}${user?.email ? `&email=${encodeURIComponent(user.email)}` : ''}`)
                 if (res.ok) {
                     const data = await res.json()
                     console.log(`✅ Billing: Found ${data.length} invoices`);

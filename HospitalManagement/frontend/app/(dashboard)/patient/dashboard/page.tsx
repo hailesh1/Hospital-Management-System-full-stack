@@ -24,7 +24,7 @@ export default function PatientDashboardPage() {
         if (!id) return;
 
         // Fetch Stats
-        const statsRes = await fetch(`/api/patient/stats?patientId=${id}`);
+        const statsRes = await fetch(`/api/patient/stats?patientId=${id}${user?.email ? `&email=${encodeURIComponent(user.email)}` : ''}`);
         if (statsRes.ok) {
           const data = await statsRes.json();
           if (data && !data.error) {

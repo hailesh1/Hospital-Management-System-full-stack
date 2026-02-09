@@ -17,7 +17,7 @@ export default function PatientPrescriptionsPage() {
             if (!user?.id) return
 
             try {
-                const res = await fetch(`/api/prescriptions?patientId=${user.id}`)
+                const res = await fetch(`/api/prescriptions?patientId=${user.id}${user?.email ? `&email=${encodeURIComponent(user.email)}` : ''}`)
                 if (res.ok) {
                     const data = await res.json()
                     setPrescriptions(data)

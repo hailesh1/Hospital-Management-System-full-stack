@@ -229,6 +229,20 @@ export default async function handler(req, res) {
                     insertValues.push(description);
                 }
 
+                if (colsSet.has('diagnosis')) {
+                    const diagnosisVal = (req.body.diagnosis ?? title ?? type ?? description ?? 'Diagnosis');
+                    insertCols.push('diagnosis');
+                    placeholders.push(`$${insertValues.length + 1}`);
+                    insertValues.push(diagnosisVal);
+                }
+
+                if (colsSet.has('treatment')) {
+                    const treatmentVal = (req.body.treatment ?? '');
+                    insertCols.push('treatment');
+                    placeholders.push(`$${insertValues.length + 1}`);
+                    insertValues.push(treatmentVal);
+                }
+
                 if (colsSet.has('doctor_id')) {
                     insertCols.push('doctor_id');
                     placeholders.push(`$${insertValues.length + 1}`);
@@ -241,13 +255,36 @@ export default async function handler(req, res) {
                     insertValues.push(finalizedDoctorName);
                 }
 
-                // date column selection: prefer created_at, then date
-                let dateCol = null;
-                if (colsSet.has('created_at')) dateCol = 'created_at';
-                else if (colsSet.has('date')) dateCol = 'date';
-                if (dateCol) {
-                    insertCols.push(dateCol);
-                    placeholders.push('NOW()');
+                // date columns: include any NOT NULL columns without defaults; otherwise include one timestamp
+                let includedDateCols = 0;
+                const includeIfRequired = (col) => {
+                    if (!colsSet.has(col)) return false;
+                    const meta = colsMeta.get(col);
+                    const nullable = String(meta?.is_nullable || '').toUpperCase() === 'YES';
+                    const hasDefault = meta?.column_default !== null;
+                    if (!nullable && !hasDefault) {
+                        insertCols.push(col);
+                        // Use CURRENT_DATE for 'date' (DATE type) else NOW()
+                        const expr = col === 'date' ? 'CURRENT_DATE' : 'NOW()';
+                        placeholders.push(expr);
+                        includedDateCols++;
+                        return true;
+                    }
+                    return false;
+                };
+                includeIfRequired('date');
+                includeIfRequired('created_at');
+                // If none required, include a sensible timestamp column
+                if (includedDateCols === 0) {
+                    if (colsSet.has('created_at')) {
+                        insertCols.push('created_at');
+                        placeholders.push('NOW()');
+                        includedDateCols++;
+                    } else if (colsSet.has('date')) {
+                        insertCols.push('date');
+                        placeholders.push('CURRENT_DATE');
+                        includedDateCols++;
+                    }
                 }
 
                 if (insertCols.length === 0) {

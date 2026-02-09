@@ -7,25 +7,48 @@ export default async function handler(req, res) {
     }
 
     try {
-        let { patientId: queryPatientId, patient_id } = req.query;
+        let { patientId: queryPatientId, patient_id, email, patientEmail } = req.query;
         let patientId = (queryPatientId || patient_id || '').trim();
+        const emailParam = (patientEmail || email || '').trim();
 
-        console.log(`[API] GET /api/patient/stats: patientId=${patientId}`);
+        console.log(`[API] GET /api/patient/stats: patientId=${patientId} email=${emailParam}`);
 
         // Handle mock/development patient IDs or missing IDs
         if (patientId) {
             const patientExists = await query('SELECT id FROM patients WHERE LOWER(TRIM(id)) = LOWER(TRIM($1))', [patientId]);
             if (patientExists.rows.length === 0) {
-                console.log(`[API] Stats: Patient ID "${patientId}" NOT FOUND even with TRIM/LOWER.`);
-                return res.status(200).json({
-                    upcomingAppointments: 0,
-                    medicalRecords: 0,
-                    prescriptions: 0,
-                    messages: 0,
-                    nextAppointment: null
-                });
+                console.log(`[API] Stats: Patient ID "${patientId}" NOT FOUND even with TRIM/LOWER. Trying email fallback...`);
+                if (emailParam) {
+                    const byEmail = await query('SELECT id FROM patients WHERE LOWER(TRIM(email)) = LOWER(TRIM($1)) LIMIT 1', [emailParam]);
+                    if (byEmail.rows.length > 0) {
+                        patientId = byEmail.rows[0].id;
+                        console.log(`[API] Stats: Resolved by email to ID "${patientId}".`);
+                    } else {
+                        return res.status(200).json({
+                            upcomingAppointments: 0,
+                            medicalRecords: 0,
+                            prescriptions: 0,
+                            messages: 0,
+                            nextAppointment: null
+                        });
+                    }
+                } else {
+                    return res.status(200).json({
+                        upcomingAppointments: 0,
+                        medicalRecords: 0,
+                        prescriptions: 0,
+                        messages: 0,
+                        nextAppointment: null
+                    });
+                }
             }
             console.log(`[API] Stats: Patient ID "${patientId}" confirmed.`);
+        } else if (emailParam) {
+            const byEmail = await query('SELECT id FROM patients WHERE LOWER(TRIM(email)) = LOWER(TRIM($1)) LIMIT 1', [emailParam]);
+            if (byEmail.rows.length > 0) {
+                patientId = byEmail.rows[0].id;
+                console.log(`[API] Stats: Resolved by email to ID "${patientId}".`);
+            }
         }
 
         if (!patientId) {

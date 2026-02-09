@@ -91,10 +91,11 @@ export default async function handler(req, res) {
   switch (method) {
     case 'GET':
       try {
-        let { patient_id, patientId } = req.query;
+        let { patient_id, patientId, email, patientEmail } = req.query;
         patientId = (patientId || patient_id || '').trim();
+        const emailParam = (patientEmail || email || '').trim();
 
-        console.log(`[API] GET /api/lab-tests: patientId=${patientId}`);
+        console.log(`[API] GET /api/lab-tests: patientId=${patientId} email=${emailParam}`);
 
         // Handle mock/development patient IDs or missing patient IDs; accept emails
         if (patientId) {
@@ -103,11 +104,35 @@ export default async function handler(req, res) {
             [patientId]
           );
           if (patientCheck.rows.length === 0) {
-            console.warn(`[API] GET: Patient ID "${patientId}" NOT FOUND even with TRIM/LOWER.`);
-            return res.status(200).json([]);
+            console.warn(`[API] GET: Patient ID "${patientId}" NOT FOUND even with TRIM/LOWER. Trying email fallback...`);
+            if (emailParam) {
+              const byEmail = await query(
+                "SELECT id FROM patients WHERE LOWER(TRIM(email)) = LOWER(TRIM($1)) LIMIT 1",
+                [emailParam]
+              );
+              if (byEmail.rows.length > 0) {
+                patientId = byEmail.rows[0].id;
+                console.log(`[API] GET: Resolved by email to ID "${patientId}".`);
+              } else {
+                return res.status(200).json([]);
+              }
+            } else {
+              return res.status(200).json([]);
+            }
           }
-          patientId = patientCheck.rows[0].id;
-          console.log(`[API] GET: Patient resolved to ID "${patientId}".`);
+          if (!emailParam) {
+            patientId = patientCheck.rows[0].id;
+            console.log(`[API] GET: Patient resolved to ID "${patientId}".`);
+          }
+        } else if (emailParam) {
+          const byEmail = await query(
+            "SELECT id FROM patients WHERE LOWER(TRIM(email)) = LOWER(TRIM($1)) LIMIT 1",
+            [emailParam]
+          );
+          if (byEmail.rows.length > 0) {
+            patientId = byEmail.rows[0].id;
+            console.log(`[API] GET: Resolved by email to ID "${patientId}".`);
+          }
         }
 
         let text = 'SELECT * FROM lab_tests';
@@ -130,7 +155,7 @@ export default async function handler(req, res) {
           orderedBy: row.ordered_by,
           orderedDate: row.ordered_date ? new Date(row.ordered_date).toISOString().split('T')[0] : null,
           status: row.status,
-          result: row.result,
+          results: row.results ?? row.result,
           notes: row.notes
         }));
 
