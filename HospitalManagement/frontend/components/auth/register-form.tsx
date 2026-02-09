@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { useAuth } from "@/contexts/auth-context"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
@@ -8,15 +8,25 @@ import { Input } from "@/components/ui/input"
 import { Loader2, Eye, EyeOff } from "lucide-react"
 import { toast } from "sonner"
 import Link from "next/link"
+import { useRouter } from "next/navigation"
 
 export function RegisterForm() {
-  const { register, isLoading } = useAuth()
+  const router = useRouter()
+  const { register, isLoading, isAuthenticated, user } = useAuth()
   const [firstName, setFirstName] = useState("")
   const [lastName, setLastName] = useState("")
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [showPassword, setShowPassword] = useState(false)
+  const [quickName, setQuickName] = useState("")
+  const [quickEmail, setQuickEmail] = useState("")
+
+  useEffect(() => {
+    if (isAuthenticated && user?.role === "patient") {
+      router.replace("/patient/dashboard")
+    }
+  }, [isAuthenticated, user, router])
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault()
@@ -42,6 +52,19 @@ export function RegisterForm() {
     toast.success("Registration successful", {
       description: "Welcome to the Patient Portal"
     })
+    router.replace("/patient/dashboard")
+  }
+
+  const handleQuickRegister = () => {
+    const name = quickName.trim()
+    const mail = quickEmail.trim()
+    if (!name || !mail) {
+      toast.error("Enter your name and email")
+      return
+    }
+    register(undefined, { name, email: mail, role: "patient" })
+    toast.success("Welcome", { description: "Redirecting to Patient Portal..." })
+    router.replace("/patient/dashboard")
   }
 
   return (
@@ -137,6 +160,33 @@ export function RegisterForm() {
               "Register"
             )}
           </Button>
+
+          <div className="pt-6 border-t border-gray-200" />
+          <div className="space-y-4">
+            <p className="text-sm font-semibold text-gray-700">Quick Patient Registration</p>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <Input
+                placeholder="Full name"
+                value={quickName}
+                onChange={(e) => setQuickName(e.target.value)}
+                className="h-11 rounded-none"
+              />
+              <Input
+                placeholder="Email address"
+                type="email"
+                value={quickEmail}
+                onChange={(e) => setQuickEmail(e.target.value)}
+                className="h-11 rounded-none"
+              />
+            </div>
+            <Button
+              type="button"
+              onClick={handleQuickRegister}
+              className="w-full h-11 bg-red-600 hover:bg-red-700 text-white rounded-none font-bold"
+            >
+              Continue to Patient Portal
+            </Button>
+          </div>
 
           <div className="text-center pt-4">
             <span className="text-sm text-gray-600">Already have an account? </span>
