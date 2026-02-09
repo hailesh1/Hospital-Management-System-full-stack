@@ -103,6 +103,29 @@ export function BookAppointmentDialog({ onAdd }: BookAppointmentDialogProps) {
 
             if (!response.ok) {
                 const errorData = await response.json()
+                if (response.status === 409) {
+                    toast.error("Time slot already taken", {
+                        description: "Please select another time.",
+                    })
+                    // Refresh availability
+                    const res = await fetch(`/api/appointments?doctor_id=${selectedDoctorId}&date=${date}`)
+                    if (res.ok) {
+                        const appointments = await res.json()
+                        const bookedTimes = appointments.map((app: any) => app.time?.substring(0, 5))
+                        const slots = []
+                        for (let i = 9; i < 17; i++) {
+                            const hour = i.toString().padStart(2, '0')
+                            slots.push(`${hour}:00`)
+                            slots.push(`${hour}:30`)
+                        }
+                        const allSlots = slots.map(slot => ({
+                            time: slot,
+                            taken: bookedTimes.includes(slot)
+                        }))
+                        setAvailableSlots(allSlots as any)
+                    }
+                    return
+                }
                 throw new Error(errorData.error || 'Failed to book appointment')
             }
 
@@ -118,7 +141,9 @@ export function BookAppointmentDialog({ onAdd }: BookAppointmentDialogProps) {
             setReason("")
         } catch (error: any) {
             console.error("Error booking appointment:", error)
-            alert(error.message)
+            if (!String(error?.message || '').includes('Time slot already taken')) {
+                alert(error.message)
+            }
         }
     }
 

@@ -191,6 +191,33 @@ export function CreateAppointmentDialog({ onAddAppointment, open: externalOpen, 
 
       if (!response.ok) {
         const errorData = await response.json()
+        if (response.status === 409) {
+          // Conflict: time taken. Show message and refresh availability
+          const msg = errorData.error || 'This time slot is already booked. Please choose another time.'
+          console.warn('Appointment conflict:', msg)
+          // Refresh availability for selected doctor/date
+          try {
+            const res = await fetch(`/api/appointments?doctor_id=${formData.doctorId}&date=${formData.date}`)
+            if (res.ok) {
+              const appointments = await res.json()
+              const bookedTimes = appointments.map((app: any) => app.time?.substring(0, 5))
+              const slots = []
+              for (let i = 9; i < 17; i++) {
+                const hour = i.toString().padStart(2, '0')
+                slots.push(`${hour}:00`)
+                slots.push(`${hour}:30`)
+              }
+              const allSlots = slots.map(slot => ({
+                time: slot,
+                taken: bookedTimes.includes(slot)
+              }))
+              setAvailableSlots(allSlots as any)
+            }
+          } catch (e) {
+            console.error('Failed to refresh availability after conflict', e)
+          }
+          throw new Error(msg)
+        }
         throw new Error(errorData.error || 'Failed to schedule appointment')
       }
 
