@@ -192,8 +192,7 @@ export function CreateAppointmentDialog({ onAddAppointment, open: externalOpen, 
       if (!response.ok) {
         const errorData = await response.json()
         if (response.status === 409) {
-          // Conflict: time taken. Show message and refresh availability
-          const msg = errorData.error || 'This time slot is already booked. Please choose another time.'
+          const msg = 'Pick another time for appointment'
           console.warn('Appointment conflict:', msg)
           // Refresh availability for selected doctor/date
           try {

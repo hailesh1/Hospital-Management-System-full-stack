@@ -104,8 +104,8 @@ export function BookAppointmentDialog({ onAdd }: BookAppointmentDialogProps) {
             if (!response.ok) {
                 const errorData = await response.json()
                 if (response.status === 409) {
-                    toast.error("Time slot already taken", {
-                        description: "Please select another time.",
+                    toast.error("Pick another time for appointment", {
+                        description: "Time slot already taken.",
                     })
                     // Refresh availability
                     const res = await fetch(`/api/appointments?doctor_id=${selectedDoctorId}&date=${date}`)
