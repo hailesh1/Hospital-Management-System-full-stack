@@ -1,4 +1,5 @@
 import { query } from '@/lib/db';
+import { randomUUID } from 'crypto';
 
 export default async function handler(req, res) {
     const { method } = req;
@@ -9,32 +10,65 @@ export default async function handler(req, res) {
                 let { patientId, patient_id } = req.query;
                 patientId = patientId || patient_id;
 
-                // Handle mock/development patient IDs or missing patient IDs
+                // Handle mock/development patient IDs or missing patient IDs; accept email too
                 if (patientId) {
-                    const patientCheck = await query('SELECT id FROM patients WHERE LOWER(TRIM(id)) = LOWER(TRIM($1))', [patientId]);
+                    const patientCheck = await query(
+                        "SELECT id FROM patients WHERE LOWER(TRIM(id::text)) = LOWER(TRIM($1)) OR LOWER(TRIM(email)) = LOWER(TRIM($1)) LIMIT 1",
+                        [patientId]
+                    );
                     if (patientCheck.rows.length === 0) {
                         console.warn(`[API] GET: Patient ID "${patientId}" NOT FOUND even with TRIM/LOWER.`);
                         return res.status(200).json([]);
                     }
+                    patientId = patientCheck.rows[0].id;
                 }
-                let text = `
-          SELECT 
-            mr.id,
-            mr.patient_id as "patientId",
-            CONCAT(p.first_name, ' ', p.last_name) as patient,
-            CONCAT(p.first_name, ' ', p.last_name) as patient_name,
-            mr.doctor_name as doctor,
-            mr.created_at as date,
-            COALESCE(mr.title, mr.diagnosis, 'Medical Record') as title,
-            mr.notes as description,
-            COALESCE(mr.type, 'consultation') as type,
-            COALESCE(mr.file_name, '') as "fileName",
-            mr.diagnosis,
-            mr.treatment,
-            'completed' as status
-          FROM medical_records mr
-          LEFT JOIN patients p ON mr.patient_id = p.id
-        `;
+
+                // Inspect existing columns on medical_records to avoid referencing missing columns
+                const colsRes = await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'medical_records'");
+                const cols = new Set(colsRes.rows.map(r => r.column_name));
+
+                const selectParts = [];
+                selectParts.push('mr.id');
+                selectParts.push("mr.patient_id as \"patientId\"");
+                selectParts.push("CONCAT(p.first_name, ' ', p.last_name) as patient");
+                selectParts.push("CONCAT(p.first_name, ' ', p.last_name) as patient_name");
+                selectParts.push('mr.doctor_name as doctor');
+
+                // date column fallback
+                if (cols.has('created_at')) selectParts.push('mr.created_at as date');
+                else if (cols.has('date')) selectParts.push('mr.date as date');
+                else selectParts.push('NOW() as date');
+
+                // title/diagnosis fallbacks
+                if (cols.has('title') && cols.has('diagnosis')) {
+                    selectParts.push("COALESCE(mr.title, mr.diagnosis, 'Medical Record') as title");
+                } else if (cols.has('diagnosis')) {
+                    selectParts.push("COALESCE(mr.diagnosis, 'Medical Record') as title");
+                } else if (cols.has('title')) {
+                    selectParts.push("COALESCE(mr.title, 'Medical Record') as title");
+                } else {
+                    selectParts.push("'Medical Record' as title");
+                }
+
+                // notes/description
+                if (cols.has('notes')) selectParts.push('mr.notes as description');
+                else selectParts.push("'' as description");
+
+                // type
+                if (cols.has('type')) selectParts.push("COALESCE(mr.type, 'consultation') as type");
+                else selectParts.push("'consultation' as type");
+
+                // file name
+                if (cols.has('file_name')) selectParts.push("COALESCE(mr.file_name, '') as \"fileName\"");
+                else selectParts.push("'' as \"fileName\"");
+
+                // optional diagnosis/treatment
+                selectParts.push(cols.has('diagnosis') ? 'mr.diagnosis' : "NULL as diagnosis");
+                selectParts.push(cols.has('treatment') ? 'mr.treatment' : "NULL as treatment");
+
+                selectParts.push("'completed' as status");
+
+                let text = `SELECT ${selectParts.join(',\n            ')}\n          FROM medical_records mr\n          LEFT JOIN patients p ON mr.patient_id = p.id`;
 
                 const values = [];
                 if (patientId) {
@@ -61,7 +95,7 @@ export default async function handler(req, res) {
 
         case 'POST':
             try {
-                let { patientId, type, title, description, fileName, doctorId, doctorName } = req.body;
+                    let { patientId, patient_name, patientName, type, title, description, fileName, doctorId, doctorName } = req.body;
 
                 if (!patientId) {
                     return res.status(400).json({ error: 'Patient ID is required' });
@@ -74,12 +108,28 @@ export default async function handler(req, res) {
                 let finalizedPatientName = 'Unknown';
 
                 if (patientExists.rows.length === 0) {
-                    console.log(`[API] POST: Patient ID ${patientId} not found. Attempting translation by name.`);
-                    if (patient_name) {
-                        const searchName = (patient_name || '').trim();
-                        // ... translation logic proceeds or correctly errors out if not found
+                    console.log(`[API] POST: Patient ID ${patientId} not found. Attempting translation by name/email.`);
+                    const providedPatientName = patientName || patient_name;
+                    if (providedPatientName) {
+                        const searchName = (providedPatientName || '').trim();
+                        // Attempt name match
+                        const nameCheck = await query(
+                            "SELECT id, first_name, last_name FROM patients WHERE (first_name ILIKE $1 AND last_name ILIKE $2) OR (first_name || ' ' || last_name ILIKE $3) LIMIT 1",
+                            [ `%${searchName.split(/\s+/)[0]}%`, `%${(searchName.split(/\s+/).slice(-1)[0] || '')}%`, `%${searchName}%` ]
+                        );
+                        if (nameCheck.rows.length > 0) {
+                            finalizedPatientId = nameCheck.rows[0].id;
+                            finalizedPatientName = `${nameCheck.rows[0].first_name} ${nameCheck.rows[0].last_name}`;
+                        }
                     }
-                    // If still not found after translation (handled later by patientExists check)
+                    // Try email resolution if patientId looks like an email
+                    if ((!finalizedPatientId || finalizedPatientId === patientId) && patientId && String(patientId).includes('@')) {
+                        const byEmail = await query("SELECT id, first_name, last_name FROM patients WHERE LOWER(TRIM(email)) = LOWER(TRIM($1)) LIMIT 1", [patientId]);
+                        if (byEmail.rows.length > 0) {
+                            finalizedPatientId = byEmail.rows[0].id;
+                            finalizedPatientName = `${byEmail.rows[0].first_name} ${byEmail.rows[0].last_name}`;
+                        }
+                    }
                 } else {
                     finalizedPatientName = `${patientExists.rows[0].first_name} ${patientExists.rows[0].last_name}`;
                 }
@@ -123,28 +173,89 @@ export default async function handler(req, res) {
                     }
                 }
 
-                // Check if patient_name column exists to avoid error if it doesn't
-                const checkPatientNameCol = await query("SELECT column_name FROM information_schema.columns WHERE table_name = 'medical_records' AND column_name = 'patient_name'");
-                const hasPatientNameCol = checkPatientNameCol.rows.length > 0;
+                // Build INSERT dynamically based on existing columns to avoid missing-column errors
+                const colsRes2 = await query("SELECT column_name, column_default, is_nullable FROM information_schema.columns WHERE table_name = 'medical_records'");
+                const colsSet = new Set(colsRes2.rows.map(r => r.column_name));
+                const colsMeta = new Map(colsRes2.rows.map(r => [r.column_name, { column_default: r.column_default, is_nullable: r.is_nullable }]));
 
-                let sqlText, sqlValues;
-                if (hasPatientNameCol) {
-                    sqlText = `
-            INSERT INTO medical_records (id, patient_id, patient_name, title, type, file_name, notes, date, doctor_id, doctor_name)
-            VALUES (uuid_generate_v4(), $1, $2, $3, $4, $5, $6, NOW(), $7, $8)
-            RETURNING *
-          `;
-                    sqlValues = [finalizedPatientId, finalizedPatientName, title, type || 'consultation', fileName || '', description, finalizedDoctorId, finalizedDoctorName];
-                } else {
-                    sqlText = `
-            INSERT INTO medical_records (id, patient_id, title, type, file_name, notes, date, doctor_id, doctor_name)
-            VALUES (uuid_generate_v4(), $1, $2, $3, $4, $5, NOW(), $6, $7)
-            RETURNING *
-          `;
-                    sqlValues = [finalizedPatientId, title, type || 'consultation', fileName || '', description, finalizedDoctorId, finalizedDoctorName];
+                const insertCols = [];
+                const placeholders = [];
+                const insertValues = [];
+
+                if (colsSet.has('id')) {
+                    const meta = colsMeta.get('id');
+                    const hasDefault = meta && meta.column_default !== null;
+                    if (!hasDefault) {
+                        insertCols.push('id');
+                        placeholders.push(`$${insertValues.length + 1}`);
+                        insertValues.push(randomUUID());
+                    }
                 }
 
-                const result = await query(sqlText, sqlValues);
+                // patient_id is required
+                if (colsSet.has('patient_id')) {
+                    insertCols.push('patient_id');
+                    placeholders.push(`$${insertValues.length + 1}`);
+                    insertValues.push(finalizedPatientId);
+                }
+
+                if (colsSet.has('patient_name')) {
+                    insertCols.push('patient_name');
+                    placeholders.push(`$${insertValues.length + 1}`);
+                    insertValues.push(finalizedPatientName);
+                }
+
+                if (colsSet.has('title')) {
+                    insertCols.push('title');
+                    placeholders.push(`$${insertValues.length + 1}`);
+                    insertValues.push(title);
+                }
+
+                if (colsSet.has('type')) {
+                    insertCols.push('type');
+                    placeholders.push(`$${insertValues.length + 1}`);
+                    insertValues.push(type || 'consultation');
+                }
+
+                if (colsSet.has('file_name')) {
+                    insertCols.push('file_name');
+                    placeholders.push(`$${insertValues.length + 1}`);
+                    insertValues.push(fileName || '');
+                }
+
+                if (colsSet.has('notes')) {
+                    insertCols.push('notes');
+                    placeholders.push(`$${insertValues.length + 1}`);
+                    insertValues.push(description);
+                }
+
+                if (colsSet.has('doctor_id')) {
+                    insertCols.push('doctor_id');
+                    placeholders.push(`$${insertValues.length + 1}`);
+                    insertValues.push(finalizedDoctorId);
+                }
+
+                if (colsSet.has('doctor_name')) {
+                    insertCols.push('doctor_name');
+                    placeholders.push(`$${insertValues.length + 1}`);
+                    insertValues.push(finalizedDoctorName);
+                }
+
+                // date column selection: prefer created_at, then date
+                let dateCol = null;
+                if (colsSet.has('created_at')) dateCol = 'created_at';
+                else if (colsSet.has('date')) dateCol = 'date';
+                if (dateCol) {
+                    insertCols.push(dateCol);
+                    placeholders.push('NOW()');
+                }
+
+                if (insertCols.length === 0) {
+                    return res.status(500).json({ error: 'No writable columns found on medical_records table' });
+                }
+
+                const sqlText = `INSERT INTO medical_records (${insertCols.join(', ')}) VALUES (${placeholders.join(', ')}) RETURNING *`;
+                const result = await query(sqlText, insertValues);
 
                 const newRecord = {
                     ...result.rows[0],
@@ -154,7 +265,7 @@ export default async function handler(req, res) {
                     description: result.rows[0].notes,
                     type: result.rows[0].type,
                     fileName: result.rows[0].file_name,
-                    date: new Date(result.rows[0].date).toISOString().split('T')[0]
+                    date: new Date(result.rows[0].created_at || result.rows[0].date || Date.now()).toISOString().split('T')[0]
                 };
 
                 res.status(201).json(newRecord);

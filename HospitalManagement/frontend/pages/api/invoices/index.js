@@ -70,15 +70,16 @@ export default async function handler(req, res) {
 
                 console.log(`[API] GET /api/invoices: patient_id=${patient_id}`);
 
-                // Handle mock/demo patient IDs only if they don't exist in the database
+                // Handle mock/demo patient IDs only if they don't exist in the database; accept emails
                 if (patient_id) {
-                    const idExists = await query('SELECT id FROM patients WHERE LOWER(TRIM(id)) = LOWER(TRIM($1))', [patient_id]);
+                    const idExists = await query("SELECT id FROM patients WHERE LOWER(TRIM(id::text)) = LOWER(TRIM($1)) OR LOWER(TRIM(email)) = LOWER(TRIM($1)) LIMIT 1", [patient_id]);
                     if (idExists.rows.length === 0) {
                         console.warn(`[API] GET: Patient ID "${patient_id}" NOT FOUND even with TRIM/LOWER.`);
                         // Return empty instead of falling back to a random patient
                         return res.status(200).json([]);
                     }
-                    console.log(`[API] GET: Patient ID "${patient_id}" confirmed.`);
+                    patient_id = idExists.rows[0].id;
+                    console.log(`[API] GET: Patient resolved to ID "${patient_id}".`);
                 }
 
                 let queryString = `
@@ -119,9 +120,18 @@ export default async function handler(req, res) {
             }
             break;
 
-        case 'POST':
+                case 'POST':
             try {
                 let { patient_id, patient_name, total, status, items, due_date } = req.body;
+
+                // If caller passed an email as patient_id, resolve to actual id and patient_name
+                if (patient_id && String(patient_id).includes('@')) {
+                    const byEmail = await query("SELECT id, first_name || ' ' || last_name AS name FROM patients WHERE LOWER(TRIM(email)) = LOWER(TRIM($1)) LIMIT 1", [patient_id]);
+                    if (byEmail.rows.length > 0) {
+                        patient_name = patient_name || byEmail.rows[0].name;
+                        patient_id = byEmail.rows[0].id;
+                    }
+                }
 
                 const colsRes = await query("SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_name = 'invoices'");
                 const cols = new Map(colsRes.rows.map(r => [r.column_name, { data_type: r.data_type, is_nullable: r.is_nullable, column_default: r.column_default }]));

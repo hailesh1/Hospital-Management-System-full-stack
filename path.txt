@@ -55,6 +55,8 @@ You can now login with:
 - reception_jane / password123 -> Should redirect to receptionist dashboard
 - dawit.kebede / password123 -> Should redirect to doctor dashboard
 
+Login as dawit.kebede / password123.
+
 
 
 

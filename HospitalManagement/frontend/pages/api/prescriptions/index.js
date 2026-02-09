@@ -64,14 +64,19 @@ export default async function handler(req, res) {
 
         console.log(`[API] GET /api/prescriptions: patient_id=${patient_id}`);
 
-        // Handle mock/demo patient IDs
+        // Handle mock/demo patient IDs and accept emails
         if (patient_id) {
-          const idExists = await query('SELECT id FROM patients WHERE LOWER(TRIM(id)) = LOWER(TRIM($1))', [patient_id]);
+          const idExists = await query(
+            "SELECT id FROM patients WHERE LOWER(TRIM(id::text)) = LOWER(TRIM($1)) OR LOWER(TRIM(email)) = LOWER(TRIM($1)) LIMIT 1",
+            [patient_id]
+          );
           if (idExists.rows.length === 0) {
             console.warn(`[API] GET: Patient ID "${patient_id}" NOT FOUND even with TRIM/LOWER.`);
             return res.status(200).json([]);
           }
-          console.log(`[API] GET: Patient ID "${patient_id}" confirmed.`);
+          // If an email was passed, normalize to the real patient id
+          patient_id = idExists.rows[0].id;
+          console.log(`[API] GET: Patient resolved to ID "${patient_id}".`);
         }
 
         let text = 'SELECT * FROM prescriptions';
@@ -125,6 +130,14 @@ export default async function handler(req, res) {
           if (patientCheck.rows.length > 0) {
             patientId = patientCheck.rows[0].id;
             patientName = patientCheck.rows[0].name || 'Unknown';
+          }
+        }
+        // If an email was supplied, resolve to patient id and name
+        if (patientId && String(patientId).includes('@')) {
+          const byEmail = await query("SELECT id, first_name || ' ' || last_name AS name FROM patients WHERE LOWER(TRIM(email)) = LOWER(TRIM($1)) LIMIT 1", [patientId]);
+          if (byEmail.rows.length > 0) {
+            patientId = byEmail.rows[0].id;
+            patientName = byEmail.rows[0].name || patientName;
           }
         }
         if (patientName === 'Unknown') {
