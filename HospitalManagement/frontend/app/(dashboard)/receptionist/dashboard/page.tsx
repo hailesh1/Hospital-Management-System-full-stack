@@ -37,15 +37,23 @@ export default function ReceptionistDashboardPage() {
     const fetchData = async () => {
       try {
         // Fetch stats
-        const statsRes = await fetch('/api/dashboard/stats')
-        const statsData = await statsRes.json()
-
-        setStats({
-          waitingArea: statsData.appointmentsToday || 0,
-          todayVisits: statsData.appointmentsToday || 0,
-          newRegistrations: statsData.newToday || 0,
-          totalRevenue: statsData.revenue || 0,
-        })
+          const statsRes = await fetch('/api/dashboard/stats')
+          if (statsRes.ok) {
+            const statsData = await statsRes.json()
+            setStats({
+              waitingArea: statsData.appointmentsToday || 0,
+              todayVisits: statsData.appointmentsToday || 0,
+              newRegistrations: statsData.newToday || 0,
+              totalRevenue: statsData.revenue || 0,
+            })
+          } else {
+            setStats({
+              waitingArea: 0,
+              todayVisits: 0,
+              newRegistrations: 0,
+              totalRevenue: 0,
+            })
+          }
 
         // Fetch today's appointments
         const apptRes = await fetch('/api/dashboard/appointments')

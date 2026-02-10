@@ -30,13 +30,22 @@ export default function DoctorDashboardPage() {
     const fetchStats = async () => {
       try {
         const res = await fetch('/api/dashboard/stats')
-        const data = await res.json()
-        setStats(prev => ({
-          ...prev,
-          appointmentsToday: data.appointmentsToday || 0,
-          patientsWaiting: prev.patientsWaiting,
-          medicalRecords: data.medicalRecords || 0,
-        }))
+        if (res.ok) {
+          const data = await res.json()
+          setStats(prev => ({
+            ...prev,
+            appointmentsToday: data.appointmentsToday || 0,
+            patientsWaiting: prev.patientsWaiting,
+            medicalRecords: data.medicalRecords || 0,
+          }))
+        } else {
+          setStats(prev => ({
+            ...prev,
+            appointmentsToday: 0,
+            patientsWaiting: prev.patientsWaiting,
+            medicalRecords: 0,
+          }))
+        }
 
         // Fetch current status
         if (user?.id) {

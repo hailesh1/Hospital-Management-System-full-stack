@@ -37,18 +37,30 @@ export default function AdminDashboardPage() {
         const fetchData = async () => {
             try {
                 const statsRes = await fetch('/api/dashboard/stats')
-                const dashboardStats = await statsRes.json()
-
-                setStats({
-                    patients: dashboardStats.patients || 0,
-                    doctors: dashboardStats.doctors || 0,
-                    appointments: dashboardStats.appointmentsToday || 0,
-                    revenue: dashboardStats.revenue || 0,
-                    records: dashboardStats.medicalRecords || 0,
-                    labTests: dashboardStats.labTests || 0,
-                    billing: dashboardStats.billing || 0,
-                    staff: dashboardStats.staff || 0,
-                })
+                if (statsRes.ok) {
+                    const dashboardStats = await statsRes.json()
+                    setStats({
+                        patients: dashboardStats.patients || 0,
+                        doctors: dashboardStats.doctors || 0,
+                        appointments: dashboardStats.appointmentsToday || 0,
+                        revenue: dashboardStats.revenue || 0,
+                        records: dashboardStats.medicalRecords || 0,
+                        labTests: dashboardStats.labTests || 0,
+                        billing: dashboardStats.billing || 0,
+                        staff: dashboardStats.staff || 0,
+                    })
+                } else {
+                    setStats({
+                        patients: 0,
+                        doctors: 0,
+                        appointments: 0,
+                        revenue: 0,
+                        records: 0,
+                        labTests: 0,
+                        billing: 0,
+                        staff: 0,
+                    })
+                }
 
                 const recentRes = await fetch('/api/dashboard/recent-patients')
                 if (recentRes.ok) {
