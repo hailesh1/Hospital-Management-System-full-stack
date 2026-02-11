@@ -2,3 +2,5 @@ node_modules/
 .next/
 *.exe
 target/
+**/*.mv.db
+**/*.trace.db

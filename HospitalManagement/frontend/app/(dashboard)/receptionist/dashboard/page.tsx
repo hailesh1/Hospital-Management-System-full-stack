@@ -70,6 +70,8 @@ export default function ReceptionistDashboardPage() {
       }
     }
     fetchData()
+    const interval = setInterval(fetchData, 30000)
+    return () => clearInterval(interval)
   }, [])
 
   const handleAddPatient = (patient: any) => {

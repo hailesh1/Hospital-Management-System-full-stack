@@ -81,6 +81,8 @@ export default function DoctorDashboardPage() {
       }
     }
     fetchStats()
+    const interval = setInterval(fetchStats, 30000)
+    return () => clearInterval(interval)
   }, [user?.id])
 
   const handleStatusChange = async (newStatus: string) => {

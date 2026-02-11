@@ -79,6 +79,8 @@ export default function AdminDashboardPage() {
         }
 
         fetchData()
+        const interval = setInterval(fetchData, 30000)
+        return () => clearInterval(interval)
     }, [])
 
     const COLORS = ['#22c55e', '#ef4444', '#f59e0b', '#3b82f6', '#8b5cf6'];

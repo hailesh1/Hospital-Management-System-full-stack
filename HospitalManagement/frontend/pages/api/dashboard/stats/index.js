@@ -13,7 +13,10 @@ export default async function handler(req, res) {
                 (SELECT COUNT(*) FROM patients) as patients,
                 (SELECT COUNT(*) FROM staff WHERE LOWER(role) = 'doctor') as doctors,
                 (SELECT COUNT(*) FROM staff) as staff,
-                (SELECT COUNT(*) FROM appointments WHERE date = DATE(CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Addis_Ababa')) as appointments_today,
+                (SELECT COUNT(*) FROM appointments 
+                  WHERE date = DATE(CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Addis_Ababa')
+                     OR DATE(appointment_date) = DATE(CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Addis_Ababa')
+                ) as appointments_today,
                 (SELECT COUNT(*) FROM medical_records) as medical_records,
                 (SELECT COUNT(*) FROM departments) as departments,
                 (SELECT COALESCE(SUM(total), 0) FROM invoices WHERE LOWER(status) = 'paid' AND DATE_TRUNC('month', created_at AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Addis_Ababa') = DATE_TRUNC('month', CURRENT_TIMESTAMP AT TIME ZONE 'UTC' AT TIME ZONE 'Africa/Addis_Ababa')) as revenue,
